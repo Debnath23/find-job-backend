@@ -1,4 +1,4 @@
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateUserDto } from '../dto/createUser.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { UsersEntity } from './users.entity';
@@ -7,25 +7,28 @@ import { UsersResponseType } from '../types/usersResponse.type';
 import { LoginDto } from '../dto/login.dto';
 import { compare } from 'bcrypt';
 import { sign } from 'jsonwebtoken';
-import { UsersResponseDto } from 'src/dto/usersResponse.dto';
+import { ApplyForDto, UsersResponseDto } from '../dto/usersResponse.dto';
+import { JobEntity } from './job.entity';
+import { Types } from 'mongoose';
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectModel(UsersEntity.name) private usersModel: Model<UsersEntity>,
+    @InjectModel(JobEntity.name) private jobModel: Model<JobEntity>,
   ) {}
 
-  buildUserResponse(usersEntity: UsersEntity): UsersResponseType {
+  buildUserResponse(usersEntity: UsersEntity): UsersResponseDto {
     return {
       username: usersEntity.username,
       email: usersEntity.email,
-      applyFor: usersEntity.applyFor,
+      applyFor: usersEntity.applyFor as unknown as ApplyForDto[],
       token: this.generateJwt(usersEntity),
     };
   }
 
   generateJwt(usersEntity: UsersEntity): string {
-    return sign({ email: usersEntity.email }, process.env.JWT_SECRET);
+    return sign({ email: usersEntity.email }, 'JWT_SECRET');
   }
 
   async findByEmail(email: string): Promise<UsersEntity> {
@@ -68,5 +71,26 @@ export class UsersService {
     }
 
     return user;
+  }
+
+  // async applyForJob(applyForDto: ApplyForDto): Promise<UsersEntity> {
+  //   const appliedForJob = new this.jobModel(applyForDto);
+  //   return appliedForJob.save();
+  // }
+
+  async applyForJob(username: string, applyForDto: ApplyForDto): Promise<UsersEntity> {
+    const user = await this.usersModel.findOne({username});
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const appliedForJob = new this.jobModel(applyForDto);
+    await appliedForJob.save();
+
+    user.applyFor.push(appliedForJob._id as Types.ObjectId);
+    await user.save();
+
+    // Populate the applyFor field with actual job documents
+    return this.usersModel.findById(user._id).populate('applyFor').exec();
   }
 }

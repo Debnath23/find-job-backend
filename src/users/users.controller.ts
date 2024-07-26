@@ -12,6 +12,7 @@ import { UsersService } from './users.service';
 import { UsersResponseType } from '../types/usersResponse.type';
 import { LoginDto } from '../dto/login.dto';
 import { ExpressRequest } from '../middlewares/auth.middleware';
+import { ApplyForDto, UsersResponseDto } from '../dto/usersResponse.dto';
 
 @Controller('users')
 export class UsersController {
@@ -20,14 +21,14 @@ export class UsersController {
   @Post()
   async createUser(
     @Body() createUserDto: CreateUserDto,
-  ): Promise<UsersResponseType> {
+  ): Promise<UsersResponseDto> {
     const user = await this.usersService.createUser(createUserDto);
 
     return this.usersService.buildUserResponse(user);
   }
 
   @Post('login')
-  async login(@Body() loginDto: LoginDto): Promise<UsersResponseType> {
+  async login(@Body() loginDto: LoginDto): Promise<UsersResponseDto> {
     const user = await this.usersService.loginUser(loginDto);
 
     return this.usersService.buildUserResponse(user);
@@ -36,11 +37,22 @@ export class UsersController {
   @Get()
   async currentUser(
     @Request() request: ExpressRequest,
-  ): Promise<UsersResponseType> {
+  ): Promise<UsersResponseDto> {
     if (!request.user) {
       throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
     }
 
     return this.usersService.buildUserResponse(request.user);
+  }
+
+  @Post('applyFor')
+  async applyFor(@Request() request: ExpressRequest, @Body() applyForDto: ApplyForDto): Promise<UsersResponseDto> {
+    if (!request.user) {
+      throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
+    }
+
+    const user = await this.usersService.applyForJob(request.user.username, applyForDto);
+
+    return this.usersService.buildUserResponse(user);
   }
 }

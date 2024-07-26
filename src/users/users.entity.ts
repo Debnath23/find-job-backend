@@ -1,10 +1,10 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { hash } from 'bcrypt';
-import { Types } from 'mongoose';
+import { Document, Types } from 'mongoose';
 
 @Schema({timestamps: true})
 export class UsersEntity extends Document {
-  @Prop()
+  @Prop({unique: true})
   username: string;
 
   @Prop()
@@ -14,12 +14,26 @@ export class UsersEntity extends Document {
   password: string;
 
   @Prop([{ type: Types.ObjectId, ref: 'JobEntity' }])
-  applyFor: [];
+  applyFor: Types.ObjectId[];
 }
 
 export const UsersEntitySchema = SchemaFactory.createForClass(UsersEntity);
 
-UsersEntitySchema.pre<UsersEntity>('save', async function (next: Function) {
-  this.password = await hash(this.password, 10);
-  next();
+// UsersEntitySchema.pre<UsersEntity>('save', async function (next: Function) {
+//   this.password = await hash(this.password, 10);
+//   next();
+// });
+
+
+UsersEntitySchema.pre<UsersEntity>('save', async function (next) {
+  if (!this.isModified('password')) {
+    return next();
+  }
+
+  try {
+    this.password = await hash(this.password, 10);
+    next();
+  } catch (error) {
+    next(error);
+  }
 });
