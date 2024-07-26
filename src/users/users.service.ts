@@ -7,6 +7,7 @@ import { UsersResponseType } from '../types/usersResponse.type';
 import { LoginDto } from '../dto/login.dto';
 import { compare } from 'bcrypt';
 import { sign } from 'jsonwebtoken';
+import { UsersResponseDto } from 'src/dto/usersResponse.dto';
 
 @Injectable()
 export class UsersService {
@@ -18,12 +19,13 @@ export class UsersService {
     return {
       username: usersEntity.username,
       email: usersEntity.email,
+      applyFor: usersEntity.applyFor,
       token: this.generateJwt(usersEntity),
     };
   }
 
   generateJwt(usersEntity: UsersEntity): string {
-    return sign({ email: usersEntity.email }, 'JWT_SECRET');
+    return sign({ email: usersEntity.email }, process.env.JWT_SECRET);
   }
 
   async findByEmail(email: string): Promise<UsersEntity> {

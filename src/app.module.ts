@@ -9,7 +9,7 @@ import { AuthMiddleware } from './middlewares/auth.middleware';
   imports: [
     UsersModule,
     MongooseModule.forRoot(
-      'mongodb+srv://debnathmahapatra740:debnathmahapatra740@cluster0.frp7eb3.mongodb.net/',
+      process.env.MONGODB_URI,
     ),
   ],
   controllers: [AppController],
