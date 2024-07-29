@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
+import { ScheduledMeetingDto } from 'src/dto/usersResponse.dto';
 
 @Schema({ _id: false })
 export class scheduledMeetingEntity {
@@ -32,7 +33,9 @@ export class JobEntity extends Document {
   applicationStatus: string;
 
   @Prop([{ type: Types.ObjectId, ref: 'scheduledMeetingEntity' }])
-  scheduledMeeting: [];
+  scheduledMeeting: ScheduledMeetingDto[];
+
+  // scheduledMeeting: Types.Array<scheduledMeetingEntity>;
 }
 
 export const JobEntitySchema = SchemaFactory.createForClass(JobEntity);

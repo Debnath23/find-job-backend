@@ -1,6 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { hash } from 'bcrypt';
 import { Document, Types } from 'mongoose';
+import { JobEntity } from './job.entity';
 
 @Schema({timestamps: true})
 export class UsersEntity extends Document {
@@ -18,11 +19,6 @@ export class UsersEntity extends Document {
 }
 
 export const UsersEntitySchema = SchemaFactory.createForClass(UsersEntity);
-
-// UsersEntitySchema.pre<UsersEntity>('save', async function (next: Function) {
-//   this.password = await hash(this.password, 10);
-//   next();
-// });
 
 
 UsersEntitySchema.pre<UsersEntity>('save', async function (next) {

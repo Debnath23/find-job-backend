@@ -1,15 +1,24 @@
-import { HttpException, HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  HttpException,
+  HttpStatus,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { CreateUserDto } from '../dto/createUser.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { UsersEntity } from './users.entity';
 import { Model } from 'mongoose';
-import { UsersResponseType } from '../types/usersResponse.type';
 import { LoginDto } from '../dto/login.dto';
 import { compare } from 'bcrypt';
 import { sign } from 'jsonwebtoken';
-import { ApplyForDto, UsersResponseDto } from '../dto/usersResponse.dto';
-import { JobEntity } from './job.entity';
+import {
+  ApplyForDto,
+  ScheduledMeetingDto,
+  UsersResponseDto,
+} from '../dto/usersResponse.dto';
+import { JobEntity, scheduledMeetingEntity } from './job.entity';
 import { Types } from 'mongoose';
+import { uploadOnCloudinary } from '../utils/cloudinary';
 
 @Injectable()
 export class UsersService {
@@ -18,11 +27,32 @@ export class UsersService {
     @InjectModel(JobEntity.name) private jobModel: Model<JobEntity>,
   ) {}
 
-  buildUserResponse(usersEntity: UsersEntity): UsersResponseDto {
+  async buildUserResponse(usersEntity: UsersEntity): Promise<UsersResponseDto> {
+    const jobIds = usersEntity.applyFor as Types.ObjectId[];
+
+    // Find the job details using the job IDs
+    const jobEntities = await this.jobModel.find({ _id: { $in: jobIds } });
+
+    const applyForDtos: ApplyForDto[] = jobEntities.map((job) => {
+      const scheduledMeetingDtos = job.scheduledMeeting.map((meeting) => ({
+        scheduledTime: meeting.scheduledTime,
+        meetingLink: meeting.meetingLink,
+      }));
+
+      return {
+        phoneNumber: job.phoneNumber,
+        address: job.address,
+        role: job.role,
+        attachments: job.attachments,
+        applicationStatus: job.applicationStatus,
+        scheduledMeeting: scheduledMeetingDtos,
+      };
+    });
+
     return {
       username: usersEntity.username,
       email: usersEntity.email,
-      applyFor: usersEntity.applyFor as unknown as ApplyForDto[],
+      applyFor: applyForDtos,
       token: this.generateJwt(usersEntity),
     };
   }
@@ -73,24 +103,57 @@ export class UsersService {
     return user;
   }
 
-  // async applyForJob(applyForDto: ApplyForDto): Promise<UsersEntity> {
-  //   const appliedForJob = new this.jobModel(applyForDto);
-  //   return appliedForJob.save();
-  // }
-
-  async applyForJob(username: string, applyForDto: ApplyForDto): Promise<UsersEntity> {
-    const user = await this.usersModel.findOne({username});
+  async applyForJob(
+    username: string,
+    applyForDto: ApplyForDto,
+  ): Promise<UsersEntity> {
+    const user = await this.usersModel.findOne({ username });
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException('User not found!');
+    }
+    const attachmentsLocalPath = applyForDto.attachments;
+
+    if (!attachmentsLocalPath) {
+      throw new HttpException(
+        'Attachment file is required.',
+        HttpStatus.UNPROCESSABLE_ENTITY,
+      );
     }
 
-    const appliedForJob = new this.jobModel(applyForDto);
+    const attachments = await uploadOnCloudinary(attachmentsLocalPath);
+
+    if (!attachments) {
+      throw new HttpException(
+        'Failed to upload attachment.',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+
+    const appliedForJob = new this.jobModel({
+      ...applyForDto,
+      attachments: attachments.url,
+    });
+
     await appliedForJob.save();
 
     user.applyFor.push(appliedForJob._id as Types.ObjectId);
     await user.save();
 
-    // Populate the applyFor field with actual job documents
     return this.usersModel.findById(user._id).populate('applyFor').exec();
+  }
+
+  async scheduledMeeting(
+    jobEntityId: string,
+    scheduleMeetingDto: ScheduledMeetingDto,
+  ) : Promise<ScheduledMeetingDto> {
+    const jobEntity = await this.jobModel.findOne({ jobEntityId });
+    if (!jobEntity) {
+      throw new NotFoundException('JobEntity is not found!');
+    }
+
+    return {
+      scheduledTime: scheduleMeetingDto.scheduledTime,
+      meetingLink: scheduleMeetingDto.meetingLink,
+    };
   }
 }

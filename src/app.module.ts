@@ -8,9 +8,9 @@ import { AuthMiddleware } from './middlewares/auth.middleware';
 
 @Module({
   imports: [
-    // ConfigModule.forRoot({
-    //   isGlobal: true,
-    // }),
+    ConfigModule.forRoot({
+      isGlobal: true,
+    }),
     // UsersModule,
     // MongooseModule.forRootAsync({
     //   imports: [ConfigModule],
