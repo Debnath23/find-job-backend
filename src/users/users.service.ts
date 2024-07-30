@@ -31,13 +31,23 @@ export class UsersService {
     const jobIds = usersEntity.applyFor as Types.ObjectId[];
   
     if (!jobIds || jobIds.length === 0) {
-      throw new NotFoundException('No jobs found for this user.');
+      return {
+        username: usersEntity.username,
+        email: usersEntity.email,
+        applyFor: [],
+        token: this.generateJwt(usersEntity),
+      };
     }
-
+  
     const jobEntities = await this.jobModel.find({ _id: { $in: jobIds } });
   
     if (!jobEntities || jobEntities.length === 0) {
-      throw new NotFoundException('Jobs not found for the provided job IDs.');
+      return {
+        username: usersEntity.username,
+        email: usersEntity.email,
+        applyFor: [],
+        token: this.generateJwt(usersEntity),
+      };
     }
   
     const applyForDtos: ApplyForDto[] = jobEntities.map((job) => {
@@ -63,7 +73,6 @@ export class UsersService {
       token: this.generateJwt(usersEntity),
     };
   }
-  
 
   generateJwt(usersEntity: UsersEntity): string {
     return sign({ email: usersEntity.email }, 'JWT_SECRET');
@@ -172,5 +181,11 @@ export class UsersService {
     }
 
     return updatedUsers; 
+  }
+
+  async getAllUsersDetails(): Promise<UsersEntity[]>{
+    const users = await this.usersModel.find().exec();
+    
+    return users;
   }
 }

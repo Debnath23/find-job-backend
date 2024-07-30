@@ -28,7 +28,7 @@ import { UsersEntity } from './users.entity';
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
-  // TODO: Get all users
+  // TODO: Get user applyJobId, Update applicationStatus
 
   @Post()
   async createUser(
@@ -117,5 +117,16 @@ export class UsersController {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
+  }
+
+  @Get('all-users')
+  async getAllUsers(@Request() request: ExpressRequest) {
+    if (!request.user) {
+      throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
+    }
+
+    const users = await this.usersService.getAllUsersDetails();
+
+    return users;
   }
 }
