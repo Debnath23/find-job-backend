@@ -16,7 +16,7 @@ import {
   ScheduledMeetingDto,
   UsersResponseDto,
 } from '../dto/usersResponse.dto';
-import { JobEntity, scheduledMeetingEntity } from './job.entity';
+import { JobEntity } from './job.entity';
 import { Types } from 'mongoose';
 import { uploadOnCloudinary } from '../utils/cloudinary';
 
@@ -29,16 +29,23 @@ export class UsersService {
 
   async buildUserResponse(usersEntity: UsersEntity): Promise<UsersResponseDto> {
     const jobIds = usersEntity.applyFor as Types.ObjectId[];
+  
+    if (!jobIds || jobIds.length === 0) {
+      throw new NotFoundException('No jobs found for this user.');
+    }
 
-    // Find the job details using the job IDs
     const jobEntities = await this.jobModel.find({ _id: { $in: jobIds } });
-
+  
+    if (!jobEntities || jobEntities.length === 0) {
+      throw new NotFoundException('Jobs not found for the provided job IDs.');
+    }
+  
     const applyForDtos: ApplyForDto[] = jobEntities.map((job) => {
       const scheduledMeetingDtos = job.scheduledMeeting.map((meeting) => ({
         scheduledTime: meeting.scheduledTime,
         meetingLink: meeting.meetingLink,
       }));
-
+  
       return {
         phoneNumber: job.phoneNumber,
         address: job.address,
@@ -48,7 +55,7 @@ export class UsersService {
         scheduledMeeting: scheduledMeetingDtos,
       };
     });
-
+  
     return {
       username: usersEntity.username,
       email: usersEntity.email,
@@ -56,6 +63,7 @@ export class UsersService {
       token: this.generateJwt(usersEntity),
     };
   }
+  
 
   generateJwt(usersEntity: UsersEntity): string {
     return sign({ email: usersEntity.email }, 'JWT_SECRET');
@@ -143,17 +151,26 @@ export class UsersService {
   }
 
   async scheduledMeeting(
-    jobEntityId: string,
+    jobId: string,
+    username: string,
     scheduleMeetingDto: ScheduledMeetingDto,
-  ) : Promise<ScheduledMeetingDto> {
-    const jobEntity = await this.jobModel.findOne({ jobEntityId });
+  ): Promise<UsersEntity> {
+    const jobEntity = await this.jobModel.findById(jobId);
+    
     if (!jobEntity) {
       throw new NotFoundException('JobEntity is not found!');
     }
 
-    return {
-      scheduledTime: scheduleMeetingDto.scheduledTime,
-      meetingLink: scheduleMeetingDto.meetingLink,
-    };
+    jobEntity.scheduledMeeting.push(scheduleMeetingDto);
+  
+    await jobEntity.save();
+  
+    const updatedUsers = await this.usersModel.findOne({ username });
+
+    if (!updatedUsers) {
+        throw new NotFoundException('Users not found!');
+    }
+
+    return updatedUsers; 
   }
 }

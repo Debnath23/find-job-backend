@@ -4,6 +4,7 @@ import {
   Get,
   HttpException,
   HttpStatus,
+  Param,
   Post,
   Request,
   UploadedFile,
@@ -21,10 +22,13 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
+import { UsersEntity } from './users.entity';
 
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
+
+  // TODO: Get all users
 
   @Post()
   async createUser(
@@ -93,33 +97,25 @@ export class UsersController {
     return this.usersService.buildUserResponse(user);
   }
 
-  // @Post('schedule-meeting')
-  // async scheduleMeeting(
-  //   @Request() request: ExpressRequest,
-  //   @Body() scheduleMeetingDto: ScheduledMeetingDto,
-  // ): Promise<UsersResponseDto> {
-  //   if (
-  //     !request.user ||
-  //     !Array.isArray(request.user.applyFor) ||
-  //     request.user.applyFor.length === 0
-  //   ) {
-  //     throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
-  //   }
+  @Post('schedule-meeting/:username/:jobId')
+  async scheduleMeeting(
+    @Param('jobId') jobId: string,
+    @Param('username') username: string,
+    @Body() scheduleMeetingDto: ScheduledMeetingDto,
+  ): Promise<UsersResponseDto> {
+    try {
+      const updatedUser: UsersEntity = await this.usersService.scheduledMeeting(
+        jobId,
+        username,
+        scheduleMeetingDto,
+      );
 
-  //   const userId = request.user.applyFor[0]._id.toString();
-
-  //   try {
-  //     const user = await this.usersService.scheduledMeeting(
-  //       userId,
-  //       scheduleMeetingDto,
-  //     );
-
-  //     return this.usersService.buildUserResponse(user);
-  //   } catch (error) {
-  //     throw new HttpException(
-  //       'Internal Server Error',
-  //       HttpStatus.INTERNAL_SERVER_ERROR,
-  //     );
-  //   }
-  // }
+      return this.usersService.buildUserResponse(updatedUser);
+    } catch (error) {
+      throw new HttpException(
+        'Internal Server Error',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
 }
