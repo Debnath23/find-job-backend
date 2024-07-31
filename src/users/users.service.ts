@@ -29,7 +29,7 @@ export class UsersService {
 
   async buildUserResponse(usersEntity: UsersEntity): Promise<UsersResponseDto> {
     const jobIds = usersEntity.applyFor as Types.ObjectId[];
-  
+
     if (!jobIds || jobIds.length === 0) {
       return {
         username: usersEntity.username,
@@ -38,9 +38,9 @@ export class UsersService {
         token: this.generateJwt(usersEntity),
       };
     }
-  
+
     const jobEntities = await this.jobModel.find({ _id: { $in: jobIds } });
-  
+
     if (!jobEntities || jobEntities.length === 0) {
       return {
         username: usersEntity.username,
@@ -49,13 +49,13 @@ export class UsersService {
         token: this.generateJwt(usersEntity),
       };
     }
-  
+
     const applyForDtos: ApplyForDto[] = jobEntities.map((job) => {
       const scheduledMeetingDtos = job.scheduledMeeting.map((meeting) => ({
         scheduledTime: meeting.scheduledTime,
         meetingLink: meeting.meetingLink,
       }));
-  
+
       return {
         phoneNumber: job.phoneNumber,
         address: job.address,
@@ -65,7 +65,7 @@ export class UsersService {
         scheduledMeeting: scheduledMeetingDtos,
       };
     });
-  
+
     return {
       username: usersEntity.username,
       email: usersEntity.email,
@@ -165,27 +165,58 @@ export class UsersService {
     scheduleMeetingDto: ScheduledMeetingDto,
   ): Promise<UsersEntity> {
     const jobEntity = await this.jobModel.findById(jobId);
-    
+
     if (!jobEntity) {
       throw new NotFoundException('JobEntity is not found!');
     }
 
     jobEntity.scheduledMeeting.push(scheduleMeetingDto);
-  
+
     await jobEntity.save();
-  
+
     const updatedUsers = await this.usersModel.findOne({ username });
 
     if (!updatedUsers) {
-        throw new NotFoundException('Users not found!');
+      throw new NotFoundException('Users not found!');
     }
 
-    return updatedUsers; 
+    return updatedUsers;
   }
 
-  async getAllUsersDetails(): Promise<UsersEntity[]>{
+  async getAllUsersDetails(): Promise<UsersEntity[]> {
     const users = await this.usersModel.find().exec();
-    
+
     return users;
+  }
+
+  async updateApplicationStatus(
+    username: string,
+    role: string,
+    applyForDto: ApplyForDto,
+  ): Promise<UsersEntity> {
+    const userEntity = await this.usersModel
+      .findOne({ username })
+      .populate<{ applyFor: JobEntity[] }>('applyFor');
+
+    if (!userEntity) {
+      throw new NotFoundException('User not found!');
+    }
+
+    const jobEntity = userEntity.applyFor.find((job) => job.role === role);
+
+    if (!jobEntity) {
+      throw new NotFoundException('Job with the specified role not found!');
+    }
+
+    jobEntity.applicationStatus = applyForDto.applicationStatus;
+
+    await this.usersModel.updateOne(
+      { username, 'applyFor._id': jobEntity._id },
+      {
+        $set: { 'applyFor.$.applicationStatus': applyForDto.applicationStatus },
+      },
+    );
+
+    return await this.usersModel.findOne({ username });
   }
 }

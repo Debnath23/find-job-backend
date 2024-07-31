@@ -119,6 +119,29 @@ export class UsersController {
     }
   }
 
+
+  @Post('update-application-status/:username/:role')
+  async updateApplicationStatus(
+    @Param('username') username: string,
+    @Param('role') role: string,
+    @Body() applyForDto: ApplyForDto,
+  ): Promise<UsersResponseDto> {
+    try {
+      const updatedUser: UsersEntity = await this.usersService.updateApplicationStatus(
+        username,
+        role,
+        applyForDto,
+      );
+
+      return this.usersService.buildUserResponse(updatedUser);
+    } catch (error) {
+      throw new HttpException(
+        'Internal Server Error',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
   @Get('all-users')
   async getAllUsers(@Request() request: ExpressRequest) {
     if (!request.user) {

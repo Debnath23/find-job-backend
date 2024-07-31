@@ -1,21 +1,27 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { hash } from 'bcrypt';
 import { Document, Types } from 'mongoose';
-import { JobEntity } from './job.entity';
+
 
 @Schema({timestamps: true})
 export class UsersEntity extends Document {
-  @Prop({unique: true})
+  @Prop({unique: true, required: true})
   username: string;
 
-  @Prop()
+  @Prop({required: true})
   email: string;
 
-  @Prop({ select: false})
+  @Prop({ select: false, required: true})
   password: string;
 
   @Prop([{ type: Types.ObjectId, ref: 'JobEntity' }])
   applyFor: Types.ObjectId[];
+
+  @Prop({ required: true, default: 2})
+  usersType: number;
+
+  @Prop({ default: true})
+  isActive: boolean;
 }
 
 export const UsersEntitySchema = SchemaFactory.createForClass(UsersEntity);

@@ -4,10 +4,10 @@ import { ScheduledMeetingDto } from 'src/dto/usersResponse.dto';
 
 @Schema({ _id: false })
 export class scheduledMeetingEntity {
-  @Prop()
+  @Prop({required: true})
   scheduledTime: string;
 
-  @Prop()
+  @Prop({required: true})
   meetingLink: string;
 }
 
@@ -17,19 +17,19 @@ export const scheduledMeetingSchema = SchemaFactory.createForClass(
 
 @Schema({ timestamps: true })
 export class JobEntity extends Document {
-  @Prop()
+  @Prop({required: true})
   phoneNumber: string;
 
-  @Prop()
+  @Prop({required: true})
   address: string;
 
-  @Prop()
+  @Prop({required: true, unique: true})
   role: string;
 
-  @Prop()
+  @Prop({required: true})
   attachments: string;
 
-  @Prop({ enum: ['Pending', 'Approved', 'Rejected'], default: 'Pending' })
+  @Prop({ enum: ['Pending', 'Approved', 'Rejected'], default: 'Pending', required: true })
   applicationStatus: string;
 
   @Prop([{ type: Types.ObjectId, ref: 'scheduledMeetingEntity' }])
