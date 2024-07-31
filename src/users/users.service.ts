@@ -160,11 +160,11 @@ export class UsersService {
   }
 
   async scheduledMeeting(
-    jobId: string,
     username: string,
+    role: string,
     scheduleMeetingDto: ScheduledMeetingDto,
   ): Promise<UsersEntity> {
-    const jobEntity = await this.jobModel.findById(jobId);
+    const jobEntity = await this.jobModel.findOne({role});
 
     if (!jobEntity) {
       throw new NotFoundException('JobEntity is not found!');
@@ -194,29 +194,29 @@ export class UsersService {
     role: string,
     applyForDto: ApplyForDto,
   ): Promise<UsersEntity> {
-    const userEntity = await this.usersModel
-      .findOne({ username })
-      .populate<{ applyFor: JobEntity[] }>('applyFor');
-
-    if (!userEntity) {
-      throw new NotFoundException('User not found!');
+    try {
+      const jobEntity = await this.jobModel.findOne({ role });
+  
+      if (!jobEntity) {
+        throw new NotFoundException('Job with the specified role not found!');
+      }
+  
+      jobEntity.applicationStatus = applyForDto.applicationStatus;
+      await jobEntity.save();
+  
+      const userEntity = await this.usersModel.findOne({ username }).populate('applyFor');
+  
+      if (!userEntity) {
+        throw new NotFoundException('User not found!');
+      }
+  
+      return userEntity;
+    } catch (error) {
+      console.error("Error occurred during update: ", error);
+      throw new HttpException(
+        'Internal Server Error',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
-
-    const jobEntity = userEntity.applyFor.find((job) => job.role === role);
-
-    if (!jobEntity) {
-      throw new NotFoundException('Job with the specified role not found!');
-    }
-
-    jobEntity.applicationStatus = applyForDto.applicationStatus;
-
-    await this.usersModel.updateOne(
-      { username, 'applyFor._id': jobEntity._id },
-      {
-        $set: { 'applyFor.$.applicationStatus': applyForDto.applicationStatus },
-      },
-    );
-
-    return await this.usersModel.findOne({ username });
   }
 }

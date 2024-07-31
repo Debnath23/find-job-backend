@@ -97,16 +97,16 @@ export class UsersController {
     return this.usersService.buildUserResponse(user);
   }
 
-  @Post('schedule-meeting/:username/:jobId')
+  @Post('schedule-meeting/:username/:role')
   async scheduleMeeting(
-    @Param('jobId') jobId: string,
     @Param('username') username: string,
+    @Param('role') role: string,
     @Body() scheduleMeetingDto: ScheduledMeetingDto,
   ): Promise<UsersResponseDto> {
     try {
       const updatedUser: UsersEntity = await this.usersService.scheduledMeeting(
-        jobId,
         username,
+        role,
         scheduleMeetingDto,
       );
 
@@ -132,7 +132,7 @@ export class UsersController {
         role,
         applyForDto,
       );
-
+      
       return this.usersService.buildUserResponse(updatedUser);
     } catch (error) {
       throw new HttpException(

@@ -29,7 +29,7 @@ export class JobEntity extends Document {
   @Prop({required: true})
   attachments: string;
 
-  @Prop({ enum: ['Pending', 'Approved', 'Rejected'], default: 'Pending', required: true })
+  @Prop({ enum: ['Pending', 'Approved', 'Rejected'], default: 'Pending' })
   applicationStatus: string;
 
   @Prop([{ type: Types.ObjectId, ref: 'scheduledMeetingEntity' }])
