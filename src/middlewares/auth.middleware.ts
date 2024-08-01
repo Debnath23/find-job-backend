@@ -7,27 +7,42 @@ import { verify } from 'jsonwebtoken';
 export interface ExpressRequest extends Request {
   user?: UsersEntity;
 }
+
 @Injectable()
 export class AuthMiddleware implements NestMiddleware {
   constructor(private usersService: UsersService) {}
 
   async use(req: ExpressRequest, res: Response, next: NextFunction) {
-    if (!req.headers['authorization']) {
+    const authHeader = req.headers['authorization'];
+    if (!authHeader) {
+      console.warn('No authorization header found');
       req.user = null;
       next();
       return;
     }
 
-    const token = req.headers['authorization'].split(' ')[1];
+    const token = authHeader.split(' ')[1];
+    const hardcodedSecret = 'your-hardcoded-secret';
 
     try {
-      const decode = verify(token, process.env.JWT_SECRET) as { email: string };
+      console.log('Extracted Token:', token);
+      console.log('Using Secret:', hardcodedSecret);
+      console.log('Env Secret (for comparison):', process.env.JWT_SECRET);
 
-      const user = await this.usersService.findByEmail(decode.email);
+      const decoded = verify(token, hardcodedSecret) as { email: string };
+      console.log('Decoded Token:', decoded);
 
-      req.user = user;
+      const user = await this.usersService.findByEmail(decoded.email);
+      if (!user) {
+        console.warn(`User not found for email: ${decoded.email}`);
+        req.user = null;
+      } else {
+        req.user = user;
+      }
+
       next();
     } catch (error) {
+      console.error('JWT Verification Error:', error.message);
       req.user = null;
       next();
     }

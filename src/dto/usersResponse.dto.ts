@@ -1,4 +1,4 @@
-import { IsString } from 'class-validator';
+import { IsNumber, IsString } from 'class-validator';
 import { IsArray, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -8,6 +8,9 @@ export class UsersResponseDto {
 
   @IsString()
   readonly email: string;
+
+  @IsNumber()
+  readonly usersType: number;
 
   @IsString()
   readonly token: string;

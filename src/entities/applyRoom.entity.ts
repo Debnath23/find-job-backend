@@ -4,7 +4,7 @@ import { Document } from 'mongoose';
 @Schema({ timestamps: true })
 export class ApplyRoomEntity extends Document {
   @Prop({ required: true })
-  roomName: string;
+  username: string;
 }
 
 export const ApplyRoomEntitySchema =

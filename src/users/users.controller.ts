@@ -23,12 +23,12 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
 import { UsersEntity } from '../entities/users.entity';
+import { CreateRoomDto } from '../dto/createRoom.dto';
+import { CreateRoomResponseDto } from '../dto/createRoomResponse.dto';
 
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
-
-  // TODO: Get user applyJobId, Update applicationStatus
 
   @Post()
   async createUser(
@@ -151,5 +151,21 @@ export class UsersController {
     const users = await this.usersService.getAllUsersDetails();
 
     return users;
+  }
+
+  @Post('admin/create-room')
+  async createRoom(
+    @Request() request: ExpressRequest,
+    @Body() createRoomDto: CreateRoomDto,
+  ): Promise<CreateRoomResponseDto> {
+    console.log("User: ",request.user);
+    
+    if (!request.user) {
+      throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
+    }
+
+    const room = await this.usersService.createRoom(request.user.usersType , createRoomDto);
+
+    return this.usersService.createRoomResponse(room);
   }
 }

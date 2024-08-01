@@ -1,13 +1,12 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
-import { AppliedCandidatesDto } from '../dto/appliedCandidates.dto';
 
 @Schema({ timestamps: true })
 export class RoomEntity extends Document {
-  @Prop({ required: true })
+  @Prop({ unique: true, required: true })
   roomName: string;
 
-  @Prop({ required: true })
+  @Prop({ unique: true, required: true })
   roomNumber: number;
 
   @Prop({ required: true })
@@ -17,7 +16,7 @@ export class RoomEntity extends Document {
   availableSeat: number;
 
   @Prop([{ type: Types.ObjectId, ref: 'ApplyRoomEntity' }])
-  appliedCandidates: AppliedCandidatesDto[];
+  appliedCandidates: Types.ObjectId[];
 }
 
 export const RoomEntitySchema = SchemaFactory.createForClass(RoomEntity);
