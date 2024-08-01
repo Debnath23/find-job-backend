@@ -1,5 +1,5 @@
 import { Injectable, NestMiddleware } from '@nestjs/common';
-import { UsersEntity } from '../users/users.entity';
+import { UsersEntity } from '../entities/users.entity';
 import { NextFunction, Response } from 'express';
 import { UsersService } from '../users/users.service';
 import { verify } from 'jsonwebtoken';
@@ -21,7 +21,7 @@ export class AuthMiddleware implements NestMiddleware {
     const token = req.headers['authorization'].split(' ')[1];
 
     try {
-      const decode = verify(token, 'JWT_SECRET') as { email: string };
+      const decode = verify(token, process.env.JWT_SECRET) as { email: string };
 
       const user = await this.usersService.findByEmail(decode.email);
 

@@ -23,7 +23,7 @@ export class JobEntity extends Document {
   @Prop({required: true})
   address: string;
 
-  @Prop({required: true, unique: true})
+  @Prop({required: true})
   role: string;
 
   @Prop({required: true})
@@ -35,7 +35,6 @@ export class JobEntity extends Document {
   @Prop([{ type: Types.ObjectId, ref: 'scheduledMeetingEntity' }])
   scheduledMeeting: ScheduledMeetingDto[];
 
-  // scheduledMeeting: Types.Array<scheduledMeetingEntity>;
 }
 
 export const JobEntitySchema = SchemaFactory.createForClass(JobEntity);

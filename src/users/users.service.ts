@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { CreateUserDto } from '../dto/createUser.dto';
 import { InjectModel } from '@nestjs/mongoose';
-import { UsersEntity } from './users.entity';
+import { UsersEntity } from '../entities/users.entity';
 import { Model } from 'mongoose';
 import { LoginDto } from '../dto/login.dto';
 import { compare } from 'bcrypt';
@@ -16,7 +16,7 @@ import {
   ScheduledMeetingDto,
   UsersResponseDto,
 } from '../dto/usersResponse.dto';
-import { JobEntity } from './job.entity';
+import { JobEntity } from '../entities/job.entity';
 import { Types } from 'mongoose';
 import { uploadOnCloudinary } from '../utils/cloudinary';
 

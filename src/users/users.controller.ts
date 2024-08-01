@@ -22,7 +22,7 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
-import { UsersEntity } from './users.entity';
+import { UsersEntity } from '../entities/users.entity';
 
 @Controller('users')
 export class UsersController {

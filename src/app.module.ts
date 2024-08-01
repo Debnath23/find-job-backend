@@ -1,29 +1,17 @@
 import { MiddlewareConsumer, Module, RequestMethod } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UsersModule } from './users/users.module';
 import { MongooseModule } from '@nestjs/mongoose';
 import { AuthMiddleware } from './middlewares/auth.middleware';
+import { envOptions } from './config/envoptions';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({
-      isGlobal: true,
-    }),
-    // UsersModule,
-    // MongooseModule.forRootAsync({
-    //   imports: [ConfigModule],
-    //   useFactory: async (configService: ConfigService) => ({
-    //     uri: configService.get<string>(process.env.MONGODB_URI),
-    //   }),
-    //   inject: [ConfigService],
-    // }),
-
+    ConfigModule.forRoot(envOptions),
     UsersModule,
-    MongooseModule.forRoot(
-      'mongodb+srv://debnathmahapatra740:debnathmahapatra740@cluster0.frp7eb3.mongodb.net/'
-    ),
+    MongooseModule.forRoot(process.env.MONGODB_URI)
   ],
   controllers: [AppController],
   providers: [AppService],
