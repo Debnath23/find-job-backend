@@ -27,6 +27,8 @@ export class UsersService {
     @InjectModel(JobEntity.name) private jobModel: Model<JobEntity>,
   ) {}
 
+  // TODO: Build different responses(for: applyForJob)
+
   async buildUserResponse(usersEntity: UsersEntity): Promise<UsersResponseDto> {
     const jobIds = usersEntity.applyFor as Types.ObjectId[];
 

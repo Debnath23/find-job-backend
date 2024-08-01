@@ -1,6 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
-import { ScheduledMeetingDto } from 'src/dto/usersResponse.dto';
+import { ScheduledMeetingDto } from '../dto/usersResponse.dto';
 
 @Schema({ _id: false })
 export class scheduledMeetingEntity {
