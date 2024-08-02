@@ -1,17 +1,18 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { compare } from 'bcrypt';
-import { sign } from 'jsonwebtoken';
 import { Model } from 'mongoose';
 import { LoginDto } from '../dto/login.dto';
 import { UsersResponseDto } from '../dto/usersResponse.dto';
 import { UsersEntity } from '../entities/users.entity';
 import { CreateUserDto } from '../dto/createUser.dto';
+import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
 export class AuthService {
   constructor(
     @InjectModel(UsersEntity.name) private usersModel: Model<UsersEntity>,
+    private jwtService: JwtService,
   ) {}
 
   async createUser(createUserDto: CreateUserDto): Promise<UsersEntity> {
@@ -63,6 +64,16 @@ export class AuthService {
   }
 
   generateJwt(usersEntity: UsersEntity): string {
-    return sign({ email: usersEntity.email }, process.env.JWT_SECRET);
+    try {
+      const secret = process.env.JWT_SECRET;
+      if (!secret) {
+        throw new Error('JWT Secret is not defined');
+      }
+
+      return this.jwtService.sign({ email: usersEntity.email }, { secret });
+    } catch (error) {
+      console.error('Error generating JWT:', error.message);
+      throw new Error('Error generating JWT');
+    }
   }
 }
