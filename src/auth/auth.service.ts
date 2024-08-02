@@ -1,4 +1,4 @@
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { Body, HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { compare } from 'bcrypt';
 import { Model } from 'mongoose';
@@ -29,7 +29,7 @@ export class AuthService {
     return createdUser.save();
   }
 
-  async login(loginDto: LoginDto): Promise<UsersEntity> {
+  async login(@Body() loginDto: LoginDto): Promise<UsersEntity> {
     const user = await this.usersModel
       .findOne({ email: loginDto.email })
       .select('+password');
@@ -75,5 +75,13 @@ export class AuthService {
       console.error('Error generating JWT:', error.message);
       throw new Error('Error generating JWT');
     }
+  }
+
+  async validateUserByEmail(email: string): Promise<UsersEntity | null> {
+    return this.usersModel.findOne({ email });
+  }
+
+  async findByEmail(email: string): Promise<UsersEntity> {
+    return this.usersModel.findOne({ email });
   }
 }

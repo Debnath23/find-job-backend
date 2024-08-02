@@ -32,6 +32,8 @@ export class UsersService {
   // TODO: applyForJob response
 
   async buildUserResponse(usersEntity: UsersEntity): Promise<UsersResponseDto> {
+
+    
     const jobIds = usersEntity.applyFor as Types.ObjectId[];
 
     if (!jobIds || jobIds.length === 0) {
@@ -45,16 +47,6 @@ export class UsersService {
     }
 
     const jobEntities = await this.jobModel.find({ _id: { $in: jobIds } });
-
-    if (!jobEntities || jobEntities.length === 0) {
-      return {
-        username: usersEntity.username,
-        email: usersEntity.email,
-        usersType: usersEntity.usersType,
-        applyFor: [],
-        token: this.generateJwt(usersEntity),
-      };
-    }
 
     const applyForDtos: ApplyForDto[] = jobEntities.map((job) => {
       const scheduledMeetingDtos = job.scheduledMeeting.map((meeting) => ({
@@ -71,6 +63,16 @@ export class UsersService {
         scheduledMeeting: scheduledMeetingDtos,
       };
     });
+
+    if (!jobEntities || jobEntities.length === 0) {
+      return {
+        username: usersEntity.username,
+        email: usersEntity.email,
+        usersType: usersEntity.usersType,
+        applyFor: applyForDtos,
+        token: this.generateJwt(usersEntity),
+      };
+    }
 
     return {
       username: usersEntity.username,

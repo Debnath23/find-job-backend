@@ -7,6 +7,7 @@ import {
   Post,
   Request,
   UploadedFile,
+  UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
@@ -18,23 +19,24 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
+import { JwtAuthGuard } from '../guards/jwt.guard';
+import { User } from '../decorators/user.decorator';
+import { UsersEntity } from '../entities/users.entity';
 
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
-  @Get()
+  @Get('me')
+  // @UseGuards(JwtAuthGuard)
   async currentUser(
-    @Request() request: ExpressRequest,
+    @User() user: UsersEntity
   ): Promise<UsersResponseDto> {
-    if (!request.user) {
-      throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
-    }
-
-    return this.usersService.buildUserResponse(request.user);
+    return this.usersService.buildUserResponse(user);
   }
 
   @Post('applyFor')
+  // @UseGuards(JwtAuthGuard)
   @UseInterceptors(
     FileInterceptor('attachments', {
       storage: diskStorage({
