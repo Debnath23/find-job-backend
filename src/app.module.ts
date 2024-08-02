@@ -6,12 +6,16 @@ import { UsersModule } from './users/users.module';
 import { MongooseModule } from '@nestjs/mongoose';
 import { AuthMiddleware } from './middlewares/auth.middleware';
 import { envOptions } from './config/envoptions';
+import { AuthModule } from './auth/auth.module';
+import { AdminModule } from './admin/admin.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot(envOptions),
     UsersModule,
-    MongooseModule.forRoot(process.env.MONGODB_URI)
+    MongooseModule.forRoot(process.env.MONGODB_URI),
+    AuthModule,
+    AdminModule
   ],
   controllers: [AppController],
   providers: [AppService],

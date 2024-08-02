@@ -22,15 +22,9 @@ export class AuthMiddleware implements NestMiddleware {
     }
 
     const token = authHeader.split(' ')[1];
-    const hardcodedSecret = 'your-hardcoded-secret';
 
     try {
-      console.log('Extracted Token:', token);
-      console.log('Using Secret:', hardcodedSecret);
-      console.log('Env Secret (for comparison):', process.env.JWT_SECRET);
-
-      const decoded = verify(token, hardcodedSecret) as { email: string };
-      console.log('Decoded Token:', decoded);
+      const decoded = verify(token, process.env.JWT_SECRET) as { email: string };
 
       const user = await this.usersService.findByEmail(decoded.email);
       if (!user) {

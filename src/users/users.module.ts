@@ -4,7 +4,6 @@ import { UsersService } from './users.service';
 import { MongooseModule } from '@nestjs/mongoose';
 import { UsersEntity, UsersEntitySchema } from '../entities/users.entity';
 import { JobEntity, JobEntitySchema } from '../entities/job.entity';
-import { RoomEntity, RoomEntitySchema } from '../entities/rooms.entity';
 import { ApplyRoomEntity, ApplyRoomEntitySchema } from '../entities/applyRoom.entity';
 
 @Module({
@@ -12,7 +11,6 @@ import { ApplyRoomEntity, ApplyRoomEntitySchema } from '../entities/applyRoom.en
     MongooseModule.forFeature([
       { name: UsersEntity.name, schema: UsersEntitySchema },
       { name: JobEntity.name, schema: JobEntitySchema },
-      { name: RoomEntity.name, schema: RoomEntitySchema },
       { name: ApplyRoomEntity.name, schema: ApplyRoomEntitySchema },
     ]),
   ],
