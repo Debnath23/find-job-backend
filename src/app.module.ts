@@ -8,6 +8,7 @@ import { AuthMiddleware } from './middlewares/auth.middleware';
 import { envOptions } from './config/envoptions';
 import { AuthModule } from './auth/auth.module';
 import { AdminModule } from './admin/admin.module';
+import { RoomBookingModule } from './room-booking/room-booking.module';
 
 @Module({
   imports: [
@@ -15,7 +16,8 @@ import { AdminModule } from './admin/admin.module';
     UsersModule,
     MongooseModule.forRoot(process.env.MONGODB_URI),
     AuthModule,
-    AdminModule
+    AdminModule,
+    RoomBookingModule
   ],
   controllers: [AppController],
   providers: [AppService],

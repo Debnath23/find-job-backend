@@ -15,9 +15,9 @@ export class CreateRoomResponseDto {
   @IsNumber()
   readonly availableSeat: number;
 
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => AppliedCandidatesDto)
-  readonly appliedCandidates: AppliedCandidatesDto[];
+  // @IsArray()
+  // @ValidateNested({ each: true })
+  // @Type(() => AppliedCandidatesDto)
+  // readonly appliedCandidates: AppliedCandidatesDto[];
 }
 

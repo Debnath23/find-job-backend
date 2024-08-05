@@ -9,10 +9,7 @@ import {
   Request,
 } from '@nestjs/common';
 import { AdminService } from './admin.service';
-import {
-  ApplyForDto,
-  ScheduledMeetingDto,
-} from '../dto/usersResponse.dto';
+import { ApplyForDto, ScheduledMeetingDto } from '../dto/usersResponse.dto';
 import { UsersEntity } from '../entities/users.entity';
 import { ExpressRequest } from '../middlewares/auth.middleware';
 import { CreateRoomDto } from '../dto/createRoom.dto';
@@ -36,7 +33,7 @@ export class AdminController {
         scheduleMeetingDto,
       );
 
-    //   return this.adminService.buildAdminResponse(updatedUser);
+      //   return this.adminService.buildAdminResponse(updatedUser);
       return this.adminService.getAllUsersDetails();
     } catch (error) {
       throw new HttpException(
@@ -78,22 +75,5 @@ export class AdminController {
     const users = await this.adminService.getAllUsersDetails();
 
     return users;
-  }
-
-  @Post('create-room')
-  async createRoom(
-    @Request() request: ExpressRequest,
-    @Body() createRoomDto: CreateRoomDto,
-  ): Promise<CreateRoomResponseDto> {
-    if (!request.user) {
-      throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
-    }
-
-    const room = await this.adminService.createRoom(
-      request.user.usersType,
-      createRoomDto,
-    );
-
-    return this.adminService.createRoomResponse(room);
   }
 }

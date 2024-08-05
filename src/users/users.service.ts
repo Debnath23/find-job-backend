@@ -83,32 +83,32 @@ export class UsersService {
     };
   }
 
-  async createRoomResponse(roomEntity: RoomEntity): Promise<CreateRoomDto> {
-    const appliedCandidatesIds =
-      roomEntity.appliedCandidates as Types.ObjectId[];
+  // async createRoomResponse(roomEntity: RoomEntity): Promise<CreateRoomDto> {
+  //   const appliedCandidatesIds =
+  //     roomEntity.appliedCandidates as Types.ObjectId[];
 
-    let appliedCandidatesDtos: AppliedCandidatesDto[] = [];
+  //   let appliedCandidatesDtos: AppliedCandidatesDto[] = [];
 
-    if (appliedCandidatesIds && appliedCandidatesIds.length > 0) {
-      const appliedCandidatesEntities = await this.applyRoomModel.find({
-        _id: { $in: appliedCandidatesIds },
-      });
+  //   if (appliedCandidatesIds && appliedCandidatesIds.length > 0) {
+  //     const appliedCandidatesEntities = await this.applyRoomModel.find({
+  //       _id: { $in: appliedCandidatesIds },
+  //     });
 
-      if (appliedCandidatesEntities && appliedCandidatesEntities.length > 0) {
-        appliedCandidatesDtos = appliedCandidatesEntities.map((candidate) => ({
-          username: candidate.username,
-        }));
-      }
-    }
+  //     if (appliedCandidatesEntities && appliedCandidatesEntities.length > 0) {
+  //       appliedCandidatesDtos = appliedCandidatesEntities.map((candidate) => ({
+  //         username: candidate.username,
+  //       }));
+  //     }
+  //   }
 
-    return {
-      roomName: roomEntity.roomName,
-      roomNumber: roomEntity.roomNumber,
-      seatCapacity: roomEntity.seatCapacity,
-      availableSeat: roomEntity.availableSeat,
-      appliedCandidates: appliedCandidatesDtos,
-    };
-  }
+  //   return {
+  //     roomName: roomEntity.roomName,
+  //     roomNumber: roomEntity.roomNumber,
+  //     seatCapacity: roomEntity.seatCapacity,
+  //     availableSeat: roomEntity.availableSeat,
+  //     appliedCandidates: appliedCandidatesDtos,
+  //   };
+  // }
 
   generateJwt(usersEntity: UsersEntity): string {
     return sign({ email: usersEntity.email }, 'JWT_SECRET');
