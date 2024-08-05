@@ -26,25 +26,29 @@ export class RoomBookingService {
     usersType: number,
     createRoomDto: CreateRoomDto,
   ): Promise<RoomEntity> {
-    if (usersType === 1) {
-      const existingRoom = await this.roomModel.findOne({
-        roomName: createRoomDto.roomName,
-      });
-
-      if (existingRoom) {
-        throw new HttpException(
-          'Room is already created!',
-          HttpStatus.UNPROCESSABLE_ENTITY,
-        );
-      }
-
-      const createdRoom = new this.roomModel(createRoomDto);
-      return createdRoom.save();
-    } else {
-      throw new HttpException(
-        'Creating room service is not available for you!',
-        HttpStatus.UNPROCESSABLE_ENTITY,
-      );
+    try {
+        if (usersType === 1) {
+          const existingRoom = await this.roomModel.findOne({
+            roomName: createRoomDto.roomName,
+          });
+    
+          if (existingRoom) {
+            throw new HttpException(
+              'Room is already created!',
+              HttpStatus.UNPROCESSABLE_ENTITY,
+            );
+          }
+    
+          const createdRoom = new this.roomModel(createRoomDto);
+          return createdRoom.save();
+        } else {
+          throw new HttpException(
+            'Creating room service is not available for you!',
+            HttpStatus.UNPROCESSABLE_ENTITY,
+          );
+        }
+    } catch (error: any) {
+        console.log(error);
     }
   }
 

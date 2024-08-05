@@ -73,4 +73,33 @@ const RoomEntitySchema = SchemaFactory.createForClass(RoomEntity);
 //   }
 // });
 
+RoomEntitySchema.pre('save', function (next) {
+  console.log('Pre-save middleware triggered.');
+
+  // Log current state
+  console.log('Current seatCapacity:', this.seatCapacity);
+  console.log('Current appliedCandidates:', this.appliedCandidates);
+  console.log('Current availableSeat:', this.availableSeat);
+
+  // Ensure appliedCandidates is an array and seatCapacity is a number
+  const appliedCandidatesLength = Array.isArray(this.appliedCandidates) ? this.appliedCandidates.length : 0;
+  const seatCapacity = typeof this.seatCapacity === 'number' ? this.seatCapacity : 0;
+
+  console.log('Calculated appliedCandidatesLength:', appliedCandidatesLength);
+  console.log('Calculated seatCapacity:', seatCapacity);
+
+  // Update availableSeat
+  this.availableSeat = seatCapacity - appliedCandidatesLength;
+
+  console.log('Updated availableSeat:', this.availableSeat);
+
+  // Check for NaN or invalid availableSeat
+  if (this.availableSeat < 0 || isNaN(this.availableSeat)) {
+    const error = new Error('There are no available seats or seat calculation resulted in NaN.');
+    return next(error);
+  }
+
+  next();
+});
+
 export { RoomEntitySchema };
