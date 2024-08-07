@@ -4,15 +4,17 @@ import { RoomBookingService } from './room-booking.service';
 import { MongooseModule } from '@nestjs/mongoose';
 import { RoomEntity, RoomEntitySchema } from '../entities/rooms.entity';
 import {
-  ApplyRoomEntity,
-  ApplyRoomEntitySchema,
-} from '../entities/applyRoom.entity';
+  BookingEntity,
+  BookingEntitySchema,
+} from '../entities/booking.entity';
+import { UsersEntity, UsersEntitySchema } from '../entities/users.entity';
 
 @Module({
   imports: [
     MongooseModule.forFeature([
+      { name: UsersEntity.name, schema: UsersEntitySchema },
       { name: RoomEntity.name, schema: RoomEntitySchema },
-      { name: ApplyRoomEntity.name, schema: ApplyRoomEntitySchema },
+      { name: BookingEntity.name, schema: BookingEntitySchema },
     ]),
   ],
   controllers: [RoomBookingController],

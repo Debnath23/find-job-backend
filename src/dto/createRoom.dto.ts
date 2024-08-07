@@ -1,6 +1,4 @@
-import { IsArray, IsNotEmpty, IsNumber, ValidateNested } from 'class-validator';
-import { AppliedCandidatesDto } from './appliedCandidates.dto';
-import { Type } from 'class-transformer';
+import { IsNotEmpty, IsNumber } from 'class-validator';
 
 export class CreateRoomDto {
   @IsNotEmpty()
@@ -11,14 +9,4 @@ export class CreateRoomDto {
 
   @IsNumber()
   readonly seatCapacity: number;
-
-  @IsNumber()
-  readonly availableSeat: number;
-
-  readonly roomId: any;
-
-  // @IsArray()
-  // @ValidateNested({ each: true })
-  // @Type(() => AppliedCandidatesDto)
-  // readonly appliedCandidates: AppliedCandidatesDto[];
 }

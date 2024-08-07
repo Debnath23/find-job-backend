@@ -1,224 +1,250 @@
 import {
   Injectable,
   BadRequestException,
+  NotFoundException,
+  UnprocessableEntityException,
   HttpException,
   HttpStatus,
-  NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { ApplyRoomEntity } from '../entities/applyRoom.entity';
+import { BookingEntity } from '../entities/booking.entity';
 import { RoomEntity } from '../entities/rooms.entity';
 import { CreateRoomDto } from '../dto/createRoom.dto';
 import { AppliedCandidatesDto } from '../dto/appliedCandidates.dto';
 import { RoomBookingResponseDto } from '../dto/roomBookingResponse.dto';
 import { RoomDetailsResponseDto } from 'src/dto/roomDetailsResponse.dto';
-
+import { UsersEntity } from '../entities/users.entity';
+import { ApiResponse } from '../responseTypes/ApiResponse';
+import { UserBookingResponseDto } from '../dto/userBookingResponse.dto';
 @Injectable()
 export class RoomBookingService {
   constructor(
+    @InjectModel(UsersEntity.name) private userModel: Model<UsersEntity>,
     @InjectModel(RoomEntity.name) private roomModel: Model<RoomEntity>,
-    @InjectModel(ApplyRoomEntity.name)
-    private applyRoomModel: Model<ApplyRoomEntity>,
+    @InjectModel(BookingEntity.name)
+    private bookingModel: Model<BookingEntity>,
   ) {}
 
-  async createRoom(
-    usersType: number,
-    createRoomDto: CreateRoomDto,
-  ): Promise<RoomEntity> {
+  async createRoom(usersType: number, createRoomDto: CreateRoomDto) {
     try {
-        if (usersType === 1) {
-          const existingRoom = await this.roomModel.findOne({
-            roomName: createRoomDto.roomName,
-          });
-    
-          if (existingRoom) {
-            throw new HttpException(
-              'Room is already created!',
-              HttpStatus.UNPROCESSABLE_ENTITY,
-            );
-          }
-    
-          const createdRoom = new this.roomModel(createRoomDto);
-          return createdRoom.save();
+      if (usersType === 1) {
+        const existingRoom = await this.roomModel.findOne({
+          $or: [
+            {
+              roomName: createRoomDto.roomName,
+            },
+            {
+              roomNumber: createRoomDto.roomNumber,
+            },
+          ],
+        });
+
+        if (existingRoom) {
+          return ApiResponse(null, 'Room is already created!');
         } else {
-          throw new HttpException(
-            'Creating room service is not available for you!',
-            HttpStatus.UNPROCESSABLE_ENTITY,
-          );
+          const createdRoom = new this.roomModel(createRoomDto);
+          createdRoom.save();
+          return ApiResponse(createdRoom, 'Room is created successfully!');
         }
-    } catch (error: any) {
-        console.log(error);
+      } else {
+        return ApiResponse(null,
+          'Creating room service is not available for you!',
+        );
+      }
+    } catch (error) {
+      console.log('Error: ', error);
+      throw new UnprocessableEntityException(
+        'Something went wrong while creating room!',
+      );
     }
   }
 
   async bookRoom(
-    username: string,
+    userId: Types.ObjectId,
     roomNumber: number,
-    bookingDate: any,
-  ): Promise<ApplyRoomEntity> {
-    const room = await this.roomModel.findOne({ roomNumber }).exec();
+    bookingDate: Date,
+  ) {
+    const availableSeats = await this.findCapacityOfARoom(
+      roomNumber,
+      bookingDate,
+    );
 
-    if (!room) {
-      throw new NotFoundException('Room not found');
+    if (availableSeats > 0) {
+      const room = await this.roomModel.findOne({ roomNumber }).exec();
+
+      if (!room) {
+        throw new NotFoundException('Room is not found!');
+      }
+
+      const booking = new this.bookingModel({
+        userId: userId,
+        roomName: room.roomName,
+        roomNumber: roomNumber,
+        bookingDate: bookingDate,
+      });
+
+      await booking.save();
+      room.appliedCandidates.push(booking._id);
+      await room.save();
+
+      const user = await this.userModel.findById(userId).exec();
+
+      user.bookings.push(booking._id);
+      await user.save();
+
+      return ApiResponse(booking, 'Room booked successfully!');
+    } else {
+      return ApiResponse(null, 'Room is fully booked for the day!');
     }
+  }
 
-    if (room.availableSeat <= 0) {
-      throw new BadRequestException('No seats available');
+  async hasUserAlreadyAppliedForDate(
+    userId: Types.ObjectId,
+    bookingDate: Date,
+  ): Promise<boolean> {
+    const booking = await this.bookingModel.findOne({
+      $and: [
+        {
+          userId: userId,
+        },
+        {
+          bookingDate: bookingDate,
+        },
+      ],
+    });
+
+    if (booking) {
+      return true;
     }
+  }
 
-    const bookingDay = new Date(bookingDate);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    if (bookingDay < today) {
-      throw new BadRequestException('Cannot book for past dates.');
-    }
-
-    const roomEntity = await this.roomModel.findOne({ roomNumber }).exec();
-
-    if (!roomEntity) {
-      throw new NotFoundException('Room not found');
-    }
-
-    const existingBooking = await this.applyRoomModel
-      .findOne({
-        username,
-        roomId: roomEntity._id,
-        bookingDate: bookingDay,
+  async findCapacityOfARoom(roomNumber: number, date: Date) {
+    const recordCounts = await this.bookingModel
+      .countDocuments({
+        $and: [
+          { roomNumber: roomNumber },
+          {
+            bookingDate: date,
+          },
+        ],
       })
       .exec();
 
-    if (existingBooking) {
-      throw new BadRequestException(
-        'User has already booked this room for the selected date.',
-      );
-    }
+    const room = await this.roomModel.findOne({ roomNumber }).exec();
 
-    const booking = new this.applyRoomModel({
-      username,
-      roomNumber,
-      bookingDate: bookingDay,
-    });
+    const availableSeats = room.seatCapacity - recordCounts;
 
-    const savedBooking = await booking.save();
-
-    roomEntity.appliedCandidates.push(savedBooking._id as Types.ObjectId);
-    await roomEntity.save();
-
-    return savedBooking;
+    return availableSeats;
   }
 
-  //   async bookRoom(
-  //     username: string,
-  //     roomNumber: number,
-  //     bookingDate: Date,
-  //   ): Promise<ApplyRoomEntity> {
-  //     const room = await this.roomModel.findOne({ roomNumber }).exec();
+  async getBookingDetails(
+    userId: Types.ObjectId,
+  ) {
+    try {
+      const user = await this.userModel.findById(userId).exec();
+      if (!user) {
+        throw new NotFoundException('User not found!');
+      }
+  
+      const bookingEntities = await this.bookingModel.find({ userId: userId }).exec();
+      if (!bookingEntities || bookingEntities.length === 0) {
+        return ApiResponse(null, 'No bookings found for this user!');
+      }
 
-  //     if (!room) {
-  //       throw new NotFoundException('Room not found');
+      // console.log("bookingEntities: ", bookingEntities);
+      
+      const bookings = bookingEntities.map((booking) => ({
+        roomName: booking.roomName,
+        roomNumber: booking.roomNumber,
+        bookingDate: booking.bookingDate,
+        bookingId: booking._id,
+      }));
+
+      console.log("Booking: ", bookings);
+      
+  
+      return bookings;
+    } catch (error) {
+      console.error('Error fetching booking details:', error);
+      throw new HttpException(
+        'Something went wrong while fetching user booking details',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  
+  // async getBookingDetails(
+  //   userId: Types.ObjectId,
+  // ): Promise<UserBookingResponseDto> {
+  //   try {
+  //     const user = await this.userModel.findById(userId).exec();
+
+  //     if (!user) {
+  //       throw new NotFoundException('User is not found!');
   //     }
 
-  //     const existingApplication = await this.applyRoomModel
-  //       .findOne({
-  //         username,
-  //         roomNumber: room.roomNumber,
-  //         bookingDate,
+
+  //     const bookingEntity = await this.bookingModel.findById(userId).exec();
+
+  //     bookingEntity.map
+
+  //     // const bookings = user.bookings.map((booking) => {
+  //     //   roomName: booking.roomName;
+  //     //   roomNumber: booking.roomNumber;
+  //     //   bookingDate: booking.bookingDate;
+  //     //   bookingId: booking._id;
+  //     // })
+  //     // console.log(bookings);
+      
+  //     return bookings;
+  //   } catch (error) {
+  //     throw new HttpException(
+  //       'Something went wrong while fetching user booking details',
+  //       HttpStatus.PROCESSING,
+  //     );
+  //   }
+  // }
+
+  // async roomDetails(roomEntity: RoomEntity, date?: Date): Promise<RoomDetailsResponseDto> {
+  //   const appliedCandidatesIds =
+  //     roomEntity.appliedCandidates as Types.ObjectId[];
+
+  //   let appliedCandidatesDtos: AppliedCandidatesDto[] = [];
+
+  //   if (appliedCandidatesIds && appliedCandidatesIds.length > 0) {
+  //     const appliedCandidatesEntities = await this.bookingModel
+  //       .find({
+  //         _id: { $in: appliedCandidatesIds },
   //       })
   //       .exec();
 
-  //     if (existingApplication) {
-  //       throw new BadRequestException(
-  //         'User has already booked this room for the selected date.',
-  //       );
+  //     if (appliedCandidatesEntities && appliedCandidatesEntities.length > 0) {
+  //       appliedCandidatesDtos = appliedCandidatesEntities.map((candidate) => ({
+  //         user: candidate.user,
+  //         appliedDate: candidate.date,
+  //       }));
   //     }
-
-  //     if (room.availableSeat <= 0) {
-  //       throw new BadRequestException('No seats available');
-  //     }
-
-  //     const newApplication = new this.applyRoomModel({
-  //       username,
-  //       roomNumber: room.roomNumber,
-  //       bookingDate,
-  //     });
-
-  //     await newApplication.save();
-
-  //     room.appliedCandidates.push(newApplication._id as Types.ObjectId);
-  //     room.availableSeat -= 1;
-  //     await room.save();
-
-  //     return newApplication;
   //   }
 
-  async createRoomResponse(roomEntity: RoomEntity): Promise<CreateRoomDto> {
-    return {
-      roomName: roomEntity.roomName,
-      roomNumber: roomEntity.roomNumber,
-      seatCapacity: roomEntity.seatCapacity,
-      availableSeat: roomEntity.availableSeat,
-      roomId: roomEntity._id,
-    };
-  }
+  //   const dateKey = date ? date.toISOString().split('T')[0] : null;
+  //   const availableSeat = dateKey ? roomEntity.availableSeatsByDate.get(dateKey) || roomEntity.seatCapacity : roomEntity.seatCapacity;
 
-  async roomBookingResponse(
-    applyRoomEntity: ApplyRoomEntity,
-  ): Promise<RoomBookingResponseDto> {
-    const roomEntity = await this.roomModel
-      .findOne({ roomNumber: applyRoomEntity.roomNumber })
-      .exec();
+  //   return {
+  //     roomName: roomEntity.roomName,
+  //     roomNumber: roomEntity.roomNumber,
+  //     seatCapacity: roomEntity.seatCapacity,
+  //     availableSeat,
+  //     appliedCandidates: appliedCandidatesDtos,
+  //   };
+  // }
 
-    if (!roomEntity) {
-      throw new NotFoundException('Room not found');
-    }
+  // async getApplyRoomById(id: string): Promise<ApplyRoomEntity> {
+  //   return this.applyRoomModel.findById(id).exec();
+  // }
 
-    return {
-      roomName: roomEntity.roomName,
-      roomNumber: roomEntity.roomNumber,
-      seatCapacity: roomEntity.seatCapacity,
-      availableSeat: roomEntity.availableSeat,
-      bookedBy: applyRoomEntity.username,
-      bookingDate: applyRoomEntity.bookingDate,
-      bookingId: applyRoomEntity._id,
-    };
-  }
-
-  async roomDetails(roomEntity: RoomEntity): Promise<RoomDetailsResponseDto> {
-    const appliedCandidatesIds =
-      roomEntity.appliedCandidates as Types.ObjectId[];
-
-    let appliedCandidatesDtos: AppliedCandidatesDto[] = [];
-
-    if (appliedCandidatesIds && appliedCandidatesIds.length > 0) {
-      const appliedCandidatesEntities = await this.applyRoomModel
-        .find({
-          _id: { $in: appliedCandidatesIds },
-        })
-        .exec();
-
-      if (appliedCandidatesEntities && appliedCandidatesEntities.length > 0) {
-        appliedCandidatesDtos = appliedCandidatesEntities.map((candidate) => ({
-          username: candidate.username,
-          appliedDate: candidate.bookingDate,
-        }));
-      }
-    }
-    return {
-      roomName: roomEntity.roomName,
-      roomNumber: roomEntity.roomNumber,
-      seatCapacity: roomEntity.seatCapacity,
-      availableSeat: roomEntity.availableSeat,
-      appliedCandidates: appliedCandidatesDtos,
-    };
-  }
-
-  async getApplyRoomById(id: string): Promise<ApplyRoomEntity> {
-    return this.applyRoomModel.findById(id).exec();
-  }
-
-  async getRoomById(id: string): Promise<RoomEntity> {
-    return this.roomModel.findById(id).exec();
-  }
+  // async getRoomById(id: string): Promise<RoomEntity> {
+  //   return this.roomModel.findById(id).exec();
+  // }
 }

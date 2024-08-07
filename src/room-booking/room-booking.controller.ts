@@ -8,7 +8,9 @@ import {
   NotFoundException,
   Param,
   Post,
+  Req,
   Request,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import { RoomBookingService } from './room-booking.service';
 import { ExpressRequest } from '../middlewares/auth.middleware';
@@ -17,8 +19,14 @@ import { CreateRoomResponseDto } from '../dto/createRoomResponse.dto';
 import { RoomBookingResponseDto } from '../dto/roomBookingResponse.dto';
 import { parse } from 'date-fns';
 import { RoomDetailsResponseDto } from '../dto/roomDetailsResponse.dto';
+import { Types } from 'mongoose';
+import { RoomBookingDto } from '../dto/roomBooking.dto';
+import { log } from 'console';
+import { ApiTags } from '@nestjs/swagger';
+import { ApiResponse } from 'src/responseTypes/ApiResponse';
 
 @Controller('room-booking')
+@ApiTags('Room Booking')
 export class RoomBookingController {
   constructor(private readonly roomBookingService: RoomBookingService) {}
 
@@ -26,65 +34,104 @@ export class RoomBookingController {
   async createRoom(
     @Request() request: ExpressRequest,
     @Body() createRoomDto: CreateRoomDto,
-  ): Promise<CreateRoomResponseDto> {
+  ) {
     if (!request.user) {
       throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
     }
 
-    const room = await this.roomBookingService.createRoom(
+    const response = await this.roomBookingService.createRoom(
       request.user.usersType,
       createRoomDto,
     );
 
-    return this.roomBookingService.createRoomResponse(room);
+    return response;
   }
 
   @Post('book')
   async bookRoom(
-    @Body('username') username: string,
-    @Body('roomNumber') roomNumber: number,
-    @Body('bookingDate') bookingDate: string,
-  ): Promise<RoomBookingResponseDto> {
-    const bookingDateObj = parse(bookingDate, 'yyyy-MM-dd', new Date());
-
-    if (isNaN(bookingDateObj.getTime())) {
-      throw new BadRequestException('Invalid booking date format.');
+    @Req() request: ExpressRequest,
+    @Body() roomBookingDto: RoomBookingDto,
+  ) {
+    if (!request.user) {
+      throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
     }
 
-    const applyRoomEntity = await this.roomBookingService.bookRoom(
-      username,
-      roomNumber,
-      bookingDateObj,
-    );
+    const userId = request.user._id;
 
-    return this.roomBookingService.roomBookingResponse(applyRoomEntity);
-  }
+    try {
+      const bookingDateObj = parse(
+        roomBookingDto.bookingDate,
+        'yyyy-MM-dd',
+        new Date(),
+      );
+      if (isNaN(bookingDateObj.getTime())) {
+        throw new BadRequestException('Invalid booking date format.');
+      }
 
-  @Get(':id')
-  async getBooking(
-    @Param('id') bookingId: string,
-  ): Promise<RoomBookingResponseDto> {
-    const applyRoomEntity =
-      await this.roomBookingService.getApplyRoomById(bookingId);
+      const hasAlreadyApplied =
+        await this.roomBookingService.hasUserAlreadyAppliedForDate(
+          userId,
+          bookingDateObj,
+        );
 
-    if (!applyRoomEntity) {
-      throw new NotFoundException('Booking not found');
+      if (hasAlreadyApplied) {
+        return ApiResponse(null, 'User cannot book the same or different rooms more than once on the same date.')
+      }
+
+      const response = await this.roomBookingService.bookRoom(
+        userId,
+        roomBookingDto.roomNumber,
+        bookingDateObj,
+      );
+
+      return response
+    } catch (error) {
+      console.log('Error: ', error);
+      throw new BadRequestException('There is no room for booking.');
     }
-
-    return this.roomBookingService.roomBookingResponse(applyRoomEntity);
   }
 
-  @Get('/room_details/:id')
-  async getRoomDetails(
-    @Param('id') roomId: string,
-  ): Promise<RoomDetailsResponseDto> {
-    const RoomEntity =
-      await this.roomBookingService.getRoomById(roomId);
+  @Get('getBookingDetails')
+  async getBookingDetails(@Req() request: ExpressRequest) {
+    try {
+      if (!request.user) {
+        throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
+      }
+      const userId = request.user._id;
 
-    if (!RoomEntity) {
-      throw new NotFoundException('Room is not found');
+      const response = await this.roomBookingService.getBookingDetails(userId);
+
+      return response;
+    } catch (error) {
+      console.log("Error: ", error);
+      throw new HttpException('Something went wrong while fetching user booking details', HttpStatus.PROCESSING);
     }
-
-    return this.roomBookingService.roomDetails(RoomEntity);
   }
+
+  // @Get('getBooking')
+  // async getBooking(
+  //   @Param('id') bookingId: string,
+  // ): Promise<RoomBookingResponseDto> {
+  //   const applyRoomEntity =
+  //     await this.roomBookingService.getApplyRoomById(bookingId);
+
+  //   if (!applyRoomEntity) {
+  //     throw new NotFoundException('Booking not found');
+  //   }
+
+  //   return this.roomBookingService.roomBookingResponse(applyRoomEntity);
+  // }
+
+  // @Get('/room_details/:id')
+  // async getRoomDetails(
+  //   @Param('id') roomId: string,
+  // ): Promise<RoomDetailsResponseDto> {
+  //   const roomEntity = await this.roomBookingService.getRoomById(roomId);
+
+  //   if (!roomEntity) {
+  //     throw new NotFoundException('Room not found');
+  //   }
+
+  //   return this.roomBookingService.roomDetails(roomEntity);
+  // }
 }

@@ -16,11 +16,16 @@ export class AuthService {
   ) {}
 
   async createUser(createUserDto: CreateUserDto): Promise<UsersEntity> {
-    const user = await this.usersModel.findOne({ email: createUserDto.email });
+    const user = await this.usersModel.findOne({
+      $or: [
+        { username: createUserDto.username },
+        { email: createUserDto.email },
+      ]
+    });
 
     if (user) {
       throw new HttpException(
-        'Email is already taken',
+        'Username or Email is already taken',
         HttpStatus.UNPROCESSABLE_ENTITY,
       );
     }

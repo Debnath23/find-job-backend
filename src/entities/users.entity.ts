@@ -17,11 +17,16 @@ export class UsersEntity extends Document {
   @Prop([{ type: Types.ObjectId, ref: 'JobEntity' }])
   applyFor: Types.ObjectId[];
 
+  @Prop([{ type: Types.ObjectId, ref: 'BookingEntity' }])
+  bookings: Types.ObjectId[];
+
   @Prop({ required: true, default: 2})
   usersType: number;
 
   @Prop({ default: true})
   isActive: boolean;
+
+  _id: Types.ObjectId;
 }
 
 export const UsersEntitySchema = SchemaFactory.createForClass(UsersEntity);

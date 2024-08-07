@@ -6,13 +6,13 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { AppliedCandidatesDto } from 'src/dto/appliedCandidates.dto';
-import { CreateRoomDto } from 'src/dto/createRoom.dto';
-import { ApplyForDto, ScheduledMeetingDto } from 'src/dto/usersResponse.dto';
-import { ApplyRoomEntity } from 'src/entities/applyRoom.entity';
-import { JobEntity } from 'src/entities/job.entity';
-import { RoomEntity } from 'src/entities/rooms.entity';
-import { UsersEntity } from 'src/entities/users.entity';
+import { AppliedCandidatesDto } from '../dto/appliedCandidates.dto';
+import { CreateRoomDto } from '../dto/createRoom.dto';
+import { ApplyForDto, ScheduledMeetingDto } from '../dto/usersResponse.dto';
+import { BookingEntity } from '../entities/booking.entity';
+import { JobEntity } from '../entities/job.entity';
+import { RoomEntity } from '../entities/rooms.entity';
+import { UsersEntity } from '../entities/users.entity';
 
 @Injectable()
 export class AdminService {

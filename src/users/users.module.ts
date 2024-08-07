@@ -4,14 +4,14 @@ import { UsersService } from './users.service';
 import { MongooseModule } from '@nestjs/mongoose';
 import { UsersEntity, UsersEntitySchema } from '../entities/users.entity';
 import { JobEntity, JobEntitySchema } from '../entities/job.entity';
-import { ApplyRoomEntity, ApplyRoomEntitySchema } from '../entities/applyRoom.entity';
+import { BookingEntity, BookingEntitySchema } from '../entities/booking.entity';
 
 @Module({
   imports: [
     MongooseModule.forFeature([
       { name: UsersEntity.name, schema: UsersEntitySchema },
       { name: JobEntity.name, schema: JobEntitySchema },
-      { name: ApplyRoomEntity.name, schema: ApplyRoomEntitySchema },
+      { name: BookingEntity.name, schema: BookingEntitySchema },
     ]),
   ],
   controllers: [UsersController],

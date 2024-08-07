@@ -16,7 +16,7 @@ import { JobEntity } from '../entities/job.entity';
 import { Types } from 'mongoose';
 import { uploadOnCloudinary } from '../utils/cloudinary';
 import { RoomEntity } from '../entities/rooms.entity';
-import { ApplyRoomEntity } from '../entities/applyRoom.entity';
+import { BookingEntity } from '../entities/booking.entity';
 import { CreateRoomDto } from '../dto/createRoom.dto';
 import { AppliedCandidatesDto } from '../dto/appliedCandidates.dto';
 
@@ -25,8 +25,6 @@ export class UsersService {
   constructor(
     @InjectModel(UsersEntity.name) private usersModel: Model<UsersEntity>,
     @InjectModel(JobEntity.name) private jobModel: Model<JobEntity>,
-    @InjectModel(ApplyRoomEntity.name)
-    private applyRoomModel: Model<ApplyRoomEntity>,
   ) {}
 
   // TODO: applyForJob response
