@@ -17,6 +17,7 @@ import { RoomDetailsResponseDto } from 'src/dto/roomDetailsResponse.dto';
 import { UsersEntity } from '../entities/users.entity';
 import { ApiResponse } from '../responseTypes/ApiResponse';
 import { UserBookingResponseDto } from '../dto/userBookingResponse.dto';
+import { FetchRoomDetailsDto } from 'src/dto/fetchRoomDetails.dto';
 @Injectable()
 export class RoomBookingService {
   constructor(
@@ -48,7 +49,8 @@ export class RoomBookingService {
           return ApiResponse(createdRoom, 'Room is created successfully!');
         }
       } else {
-        return ApiResponse(null,
+        return ApiResponse(
+          null,
           'Creating room service is not available for you!',
         );
       }
@@ -138,22 +140,20 @@ export class RoomBookingService {
     return availableSeats;
   }
 
-  async getBookingDetails(
-    userId: Types.ObjectId,
-  ) {
+  async getBookingDetails(userId: Types.ObjectId) {
     try {
       const user = await this.userModel.findById(userId).exec();
       if (!user) {
         throw new NotFoundException('User not found!');
       }
-  
-      const bookingEntities = await this.bookingModel.find({ userId: userId }).exec();
+
+      const bookingEntities = await this.bookingModel
+        .find({ userId: userId })
+        .exec();
       if (!bookingEntities || bookingEntities.length === 0) {
         return ApiResponse(null, 'No bookings found for this user!');
       }
 
-      // console.log("bookingEntities: ", bookingEntities);
-      
       const bookings = bookingEntities.map((booking) => ({
         roomName: booking.roomName,
         roomNumber: booking.roomNumber,
@@ -161,9 +161,6 @@ export class RoomBookingService {
         bookingId: booking._id,
       }));
 
-      console.log("Booking: ", bookings);
-      
-  
       return bookings;
     } catch (error) {
       console.error('Error fetching booking details:', error);
@@ -174,77 +171,108 @@ export class RoomBookingService {
     }
   }
 
-  
-  // async getBookingDetails(
-  //   userId: Types.ObjectId,
-  // ): Promise<UserBookingResponseDto> {
+  // async getRoomDetails(usersType: number, roomNumber: number, dateObj: Date) {
   //   try {
-  //     const user = await this.userModel.findById(userId).exec();
+  //     if (usersType === 1) {
+  //       const room = await this.roomModel.findOne({ roomNumber }).exec();
 
-  //     if (!user) {
-  //       throw new NotFoundException('User is not found!');
+  //       if (!room) {
+  //         return ApiResponse(null, 'Room is not found');
+  //       } else {
+  //         const bookings = await this.bookingModel
+  //           .findOne({
+  //             $and: [
+  //               {
+  //                 roomNumber: roomNumber,
+  //               },
+  //               {
+  //                 bookingDate: dateObj,
+  //               },
+  //             ],
+  //           })
+  //           .exec();
+
+  //         if (!bookings) {
+  //           return ApiResponse(
+  //             null,
+  //             'No existing bookings of the room for the date.',
+  //           );
+  //         } else {
+  //           const booking = bookings.map((booking) => ({
+  //             const user = await this.userModel.findById(booking.userId).exec();
+
+  //             userDetails: {
+  //               username: user?.username,
+  //               email: user?.email,
+  //             }
+
+  //             roomName: booking.roomName,
+  //             roomNumber: booking.roomNumber,
+  //             bookingDate: booking.bookingDate,
+  //             bookingId: booking._id,
+  //           }));
+            
+  //           return booking;
+  //         }
+  //       }
+  //     } else {
+  //       return ApiResponse(
+  //         null,
+  //         'Fetching room details service is not available for you!',
+  //       );
   //     }
-
-
-  //     const bookingEntity = await this.bookingModel.findById(userId).exec();
-
-  //     bookingEntity.map
-
-  //     // const bookings = user.bookings.map((booking) => {
-  //     //   roomName: booking.roomName;
-  //     //   roomNumber: booking.roomNumber;
-  //     //   bookingDate: booking.bookingDate;
-  //     //   bookingId: booking._id;
-  //     // })
-  //     // console.log(bookings);
-      
-  //     return bookings;
   //   } catch (error) {
-  //     throw new HttpException(
-  //       'Something went wrong while fetching user booking details',
-  //       HttpStatus.PROCESSING,
+  //     console.log('Error: ', error);
+  //     throw new UnprocessableEntityException(
+  //       'Something went wrong while fetch room details!',
   //     );
   //   }
   // }
 
-  // async roomDetails(roomEntity: RoomEntity, date?: Date): Promise<RoomDetailsResponseDto> {
-  //   const appliedCandidatesIds =
-  //     roomEntity.appliedCandidates as Types.ObjectId[];
-
-  //   let appliedCandidatesDtos: AppliedCandidatesDto[] = [];
-
-  //   if (appliedCandidatesIds && appliedCandidatesIds.length > 0) {
-  //     const appliedCandidatesEntities = await this.bookingModel
-  //       .find({
-  //         _id: { $in: appliedCandidatesIds },
-  //       })
-  //       .exec();
-
-  //     if (appliedCandidatesEntities && appliedCandidatesEntities.length > 0) {
-  //       appliedCandidatesDtos = appliedCandidatesEntities.map((candidate) => ({
-  //         user: candidate.user,
-  //         appliedDate: candidate.date,
-  //       }));
-  //     }
-  //   }
-
-  //   const dateKey = date ? date.toISOString().split('T')[0] : null;
-  //   const availableSeat = dateKey ? roomEntity.availableSeatsByDate.get(dateKey) || roomEntity.seatCapacity : roomEntity.seatCapacity;
-
-  //   return {
-  //     roomName: roomEntity.roomName,
-  //     roomNumber: roomEntity.roomNumber,
-  //     seatCapacity: roomEntity.seatCapacity,
-  //     availableSeat,
-  //     appliedCandidates: appliedCandidatesDtos,
-  //   };
-  // }
-
-  // async getApplyRoomById(id: string): Promise<ApplyRoomEntity> {
-  //   return this.applyRoomModel.findById(id).exec();
-  // }
-
-  // async getRoomById(id: string): Promise<RoomEntity> {
-  //   return this.roomModel.findById(id).exec();
-  // }
+  async getRoomDetails(usersType: number, roomNumber: number, dateObj: Date) {
+    try {
+      if (usersType === 1) {
+        const room = await this.roomModel.findOne({ roomNumber }).exec();
+  
+        if (!room) {
+          return ApiResponse(null, 'Room not found');
+        }
+  
+        const bookings = await this.bookingModel.find({
+          roomNumber: roomNumber,
+          bookingDate: dateObj,
+        }).exec();
+  
+        if (!bookings.length) {
+          return ApiResponse(null, 'No existing bookings for the room on the specified date.');
+        }
+  
+        const bookingDetails = await Promise.all(bookings.map(async (booking) => {
+          const user = await this.userModel.findById(booking.userId).exec();
+  
+          return {
+            userDetails: {
+              username: user?.username,
+              email: user?.email,
+            },
+            roomName: booking.roomName,
+            roomNumber: booking.roomNumber,
+            bookingDate: booking.bookingDate,
+            bookingId: booking._id,
+          };
+        }));
+  
+        return bookingDetails;
+  
+      } else {
+        return ApiResponse(null, 'Fetching room details service is not available for you!');
+      }
+    } catch (error) {
+      console.error('Error: ', error);
+      throw new UnprocessableEntityException(
+        'Something went wrong while fetching room details!',
+      );
+    }
+  }
+  
 }
