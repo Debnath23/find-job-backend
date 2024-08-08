@@ -7,6 +7,7 @@ import {
   HttpStatus,
   Param,
   Post,
+  Query,
   Req,
   Request,
 } from '@nestjs/common';
@@ -117,36 +118,51 @@ export class RoomBookingController {
     }
   }
 
-  @Get('getRoomDetails/:roomNumber/:date')
+  @Get('getRoomDetails')
   async getRoomDetails(
-    @Param('roomNumber') roomNumber: number,
-    @Param('date') date: string,
     @Request() request: ExpressRequest,
+    @Query('roomNumber') roomNumber?: number,
+    @Query('date') date?: string,
   ) {
     try {
       if (!request.user) {
         throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
       }
 
+      let dateObj: Date | null = null;
 
-      const dateObj = parse(date, 'yyyy-MM-dd', new Date());
+      if (date) {
+        dateObj = parse(date, 'yyyy-MM-dd', new Date());
 
-      if (!isValid(dateObj)) {
-        return ApiResponse(null, 'Invalid booking date format.');
+        if (!isValid(dateObj)) {
+          return ApiResponse(null, 'Invalid booking date format.');
+        }
       }
 
-      const response = await this.roomBookingService.getRoomDetails(
-        request.user.usersType,
-        roomNumber,
-        dateObj,
-      );
-
-      return response;
+      if (roomNumber && dateObj) {
+        const response = await this.roomBookingService.getRoomDetails(
+          request.user.usersType,
+          roomNumber,
+          dateObj,
+        );
+        return response;
+      } else if (roomNumber) {
+        const response = await this.roomBookingService.getARoomDetails(
+          request.user.usersType,
+          roomNumber,
+        );
+        return response;
+      } else {
+        const response = await this.roomBookingService.getAllRoomDetails(
+          request.user.usersType,
+        );
+        return response;
+      }
     } catch (error) {
-      console.log('Error: ', error);
+      console.error('Error:', error);
       throw new HttpException(
         'Something went wrong while fetching room details',
-        HttpStatus.PROCESSING,
+        HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
   }
@@ -163,7 +179,7 @@ export class RoomBookingController {
 
     try {
       if (!date) {
-        return ApiResponse(null, 'Date is required.')
+        return ApiResponse(null, 'Date is required.');
       }
 
       const dateObj = parse(date, 'yyyy-MM-dd', new Date());

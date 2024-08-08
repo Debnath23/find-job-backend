@@ -230,69 +230,6 @@ export class RoomBookingService {
     }
   }
 
-  // async getRoomDetails(usersType: number, roomNumber: number, dateObj: Date) {
-  //   try {
-  //     if (usersType === 1) {
-  //       const room = await this.roomModel.findOne({ roomNumber }).exec();
-
-  //       if (!room) {
-  //         return ApiResponse(null, 'Room not found');
-  //       }
-
-  //       const bookings = await this.bookingModel
-  //         .find({
-  //           roomNumber: roomNumber,
-  //           bookingDate: dateObj,
-  //         })
-  //         .exec();
-
-  //       if (!bookings.length) {
-  //         return ApiResponse(
-  //           null,
-  //           'No existing bookings for the room on the specified date.',
-  //         );
-  //       }
-
-  //       const bookingDetails = await Promise.all(
-  //         bookings.map(async (booking) => {
-  //           const user = await this.userModel.findById(booking.userId).exec();
-
-  //           const availableSeatsOfTheRoom =
-  //             await this.findAvailableSeatsOfARoom(roomNumber, dateObj);
-
-  //           return {
-  //             roomName: booking.roomName,
-  //             roomNumber: booking.roomNumber,
-  //             availableSeats: availableSeatsOfTheRoom.availableSeats,
-  //             booking: [
-  //               {
-  //                 userDetails: {
-  //                   username: user?.username,
-  //                   email: user?.email,
-  //                 },
-  //                 bookingDate: booking.bookingDate,
-  //                 bookingId: booking._id,
-  //               },
-  //             ],
-  //           };
-  //         }),
-  //       );
-
-  //       return bookingDetails;
-  //     } else {
-  //       return ApiResponse(
-  //         null,
-  //         'Fetching room details service is not available for you!',
-  //       );
-  //     }
-  //   } catch (error) {
-  //     console.error('Error: ', error);
-  //     throw new UnprocessableEntityException(
-  //       'Something went wrong while fetching room details!',
-  //     );
-  //   }
-  // }
-
   async getRoomDetails(usersType: number, roomNumber: number, dateObj: Date) {
     try {
       if (usersType !== 1) {
@@ -301,28 +238,31 @@ export class RoomBookingService {
           'Fetching room details service is not available for you!',
         );
       }
-  
+
       const room = await this.roomModel.findOne({ roomNumber }).exec();
       if (!room) {
         return ApiResponse(null, 'Room not found');
       }
-  
+
       const bookings = await this.bookingModel
         .find({
           roomNumber: roomNumber,
           bookingDate: dateObj,
         })
         .exec();
-  
+
       if (!bookings.length) {
         return ApiResponse(
           null,
           'No existing bookings for the room on the specified date.',
         );
       }
-  
-      const availableSeatsOfTheRoom = await this.findAvailableSeatsOfARoom(roomNumber, dateObj);
-  
+
+      const availableSeatsOfTheRoom = await this.findAvailableSeatsOfARoom(
+        roomNumber,
+        dateObj,
+      );
+
       const bookingDetails = {
         roomName: room.roomName,
         roomNumber: room.roomNumber,
@@ -338,17 +278,123 @@ export class RoomBookingService {
               bookingDate: booking.bookingDate,
               bookingId: booking._id,
             };
-          })
+          }),
         ),
       };
-  
+
       return bookingDetails;
     } catch (error) {
       console.error('Error: ', error);
-      throw new UnprocessableEntityException(
-        'Something went wrong while fetching room details!',
+      return ApiResponse(
+        null,
+        'Something went wrong while fetching room details for the specified date!',
       );
     }
   }
-  
+
+  async getARoomDetails(usersType: number, roomNumber: number) {
+    try {
+      if (usersType !== 1) {
+        return ApiResponse(
+          null,
+          'Fetching room details service is not available for you!',
+        );
+      }
+
+      const room = await this.roomModel.findOne({ roomNumber }).exec();
+
+      if (!room) {
+        return ApiResponse(null, 'Room not found');
+      }
+
+      const bookings = await this.bookingModel
+        .find({ roomNumber: roomNumber })
+        .exec();
+
+      if (!bookings || bookings.length === 0) {
+        return ApiResponse(null, 'Bookings are not found!');
+      }
+
+      const bookingDetails = {
+        roomName: room.roomName,
+        roomNumber: room.roomNumber,
+        booking: await Promise.all(
+          bookings.map(async (booking) => {
+            const user = await this.userModel.findById(booking.userId).exec();
+            return {
+              userDetails: {
+                username: user?.username,
+                email: user?.email,
+              },
+              bookingDate: booking.bookingDate,
+              bookingId: booking._id,
+            };
+          }),
+        ),
+      };
+
+      return bookingDetails;
+    } catch (error) {
+      console.error('Error fetching room details:', error);
+      return ApiResponse(
+        null,
+        'Something went wrong while fetching room details',
+      );
+    }
+  }
+
+  async getAllRoomDetails(usersType: number) {
+    try {
+      if (usersType !== 1) {
+        return ApiResponse(
+          null,
+          'Fetching room details service is not available for you!',
+        );
+      }
+
+      const roomEntity = await this.roomModel.find().exec();
+
+      if (!roomEntity || roomEntity.length === 0) {
+        return ApiResponse(null, 'No room exists.');
+      }
+
+      const roomDetails = await Promise.all(
+        roomEntity.map(async (room) => {
+          const bookings = await this.bookingModel
+            .find({ _id: { $in: room.appliedCandidates } })
+            .exec();
+
+          const appliedCandidates = await Promise.all(
+            bookings.map(async (booking) => {
+              const user = await this.userModel.findById(booking.userId).exec();
+              return {
+                userDetails: {
+                  username: user?.username,
+                  email: user?.email,
+                },
+                bookingDate: booking.bookingDate,
+                bookingId: booking._id,
+              };
+            }),
+          );
+
+          return {
+            _id: room._id,
+            roomName: room.roomName,
+            roomNumber: room.roomNumber,
+            seatCapacity: room.seatCapacity,
+            appliedCandidates,
+          };
+        }),
+      );
+
+      return roomDetails;
+    } catch (error) {
+      console.error('Error fetching room details:', error);
+      return ApiResponse(
+        null,
+        'Something went wrong while fetching room details',
+      );
+    }
+  }
 }
