@@ -1,6 +1,5 @@
 import {
   Injectable,
-  BadRequestException,
   NotFoundException,
   UnprocessableEntityException,
   HttpException,
@@ -11,13 +10,9 @@ import { Model, Types } from 'mongoose';
 import { BookingEntity } from '../entities/booking.entity';
 import { RoomEntity } from '../entities/rooms.entity';
 import { CreateRoomDto } from '../dto/createRoom.dto';
-import { AppliedCandidatesDto } from '../dto/appliedCandidates.dto';
-import { RoomBookingResponseDto } from '../dto/roomBookingResponse.dto';
-import { RoomDetailsResponseDto } from 'src/dto/roomDetailsResponse.dto';
 import { UsersEntity } from '../entities/users.entity';
 import { ApiResponse } from '../responseTypes/ApiResponse';
-import { UserBookingResponseDto } from '../dto/userBookingResponse.dto';
-import { FetchRoomDetailsDto } from 'src/dto/fetchRoomDetails.dto';
+
 @Injectable()
 export class RoomBookingService {
   constructor(
@@ -67,37 +62,43 @@ export class RoomBookingService {
     roomNumber: number,
     bookingDate: Date,
   ) {
-    const availableSeats = await this.findCapacityOfARoom(
-      roomNumber,
-      bookingDate,
-    );
+    try {
+      const availableSeatsResponse = await this.findAvailableSeatsOfARoom(
+        roomNumber,
+        bookingDate,
+      );
 
-    if (availableSeats > 0) {
-      const room = await this.roomModel.findOne({ roomNumber }).exec();
+      if (availableSeatsResponse.availableSeats > 0) {
+        const room = await this.roomModel.findOne({ roomNumber }).exec();
 
-      if (!room) {
-        throw new NotFoundException('Room is not found!');
+        if (!room) {
+          throw new NotFoundException('Room is not found!');
+        }
+
+        const booking = new this.bookingModel({
+          userId: userId,
+          roomName: room.roomName,
+          roomNumber: roomNumber,
+          bookingDate: bookingDate,
+        });
+
+        await booking.save();
+        room.appliedCandidates.push(booking._id);
+        await room.save();
+
+        const user = await this.userModel.findById(userId).exec();
+
+        user.bookings.push(booking._id);
+        await user.save();
+
+        return ApiResponse(booking, 'Room booked successfully!');
+      } else {
+        return ApiResponse(null, 'Room is fully booked for the day!');
       }
-
-      const booking = new this.bookingModel({
-        userId: userId,
-        roomName: room.roomName,
-        roomNumber: roomNumber,
-        bookingDate: bookingDate,
-      });
-
-      await booking.save();
-      room.appliedCandidates.push(booking._id);
-      await room.save();
-
-      const user = await this.userModel.findById(userId).exec();
-
-      user.bookings.push(booking._id);
-      await user.save();
-
-      return ApiResponse(booking, 'Room booked successfully!');
-    } else {
-      return ApiResponse(null, 'Room is fully booked for the day!');
+    } catch (error) {
+      throw new UnprocessableEntityException(
+        'Something went wrong while book a room!',
+      );
     }
   }
 
@@ -105,42 +106,58 @@ export class RoomBookingService {
     userId: Types.ObjectId,
     bookingDate: Date,
   ): Promise<boolean> {
-    const booking = await this.bookingModel.findOne({
-      $and: [
-        {
-          userId: userId,
-        },
-        {
-          bookingDate: bookingDate,
-        },
-      ],
-    });
+    try {
+      const booking = await this.bookingModel.findOne({
+        $and: [
+          {
+            userId: userId,
+          },
+          {
+            bookingDate: bookingDate,
+          },
+        ],
+      });
 
-    if (booking) {
-      return true;
+      if (booking) {
+        return true;
+      }
+    } catch (error) {
+      throw new UnprocessableEntityException(
+        'Something went wrong while checking the user is already booked any room for the day!',
+      );
     }
   }
 
-  async findCapacityOfARoom(roomNumber: number, date: Date) {
-    const recordCounts = await this.bookingModel
-      .countDocuments({
-        $and: [
-          { roomNumber: roomNumber },
-          {
-            bookingDate: date,
-          },
-        ],
-      })
-      .exec();
+  async findAvailableSeatsOfARoom(roomNumber: number, date: Date) {
+    try {
+      const recordCounts = await this.bookingModel
+        .countDocuments({
+          $and: [
+            { roomNumber: roomNumber },
+            {
+              bookingDate: date,
+            },
+          ],
+        })
+        .exec();
 
-    const room = await this.roomModel.findOne({ roomNumber }).exec();
+      const room = await this.roomModel.findOne({ roomNumber }).exec();
 
-    const availableSeats = room.seatCapacity - recordCounts;
+      const availableSeats = room.seatCapacity - recordCounts;
 
-    return availableSeats;
+      return {
+        seatCapacity: room.seatCapacity,
+        numberOfBookings: recordCounts,
+        availableSeats: availableSeats,
+      };
+    } catch (error) {
+      throw new UnprocessableEntityException(
+        'Something went wrong while fetching booking-availability of a room!',
+      );
+    }
   }
 
-  async getBookingDetails(userId: Types.ObjectId) {
+  async getUserBookingDetails(userId: Types.ObjectId) {
     try {
       const user = await this.userModel.findById(userId).exec();
       if (!user) {
@@ -171,50 +188,97 @@ export class RoomBookingService {
     }
   }
 
+  async getAllUserBookingDetails() {
+    try {
+      const userEntities = await this.userModel.find().exec();
+
+      if (!userEntities || userEntities.length === 0) {
+        return ApiResponse(null, 'No bookings found!');
+      }
+
+      const bookings = await Promise.all(
+        userEntities.map(async (user) => {
+          const userBookings = await Promise.all(
+            user.bookings.map(async (bookingId) => {
+              const booking = await this.bookingModel
+                .findById(bookingId)
+                .exec();
+              return {
+                bookingId: booking._id,
+                roomName: booking.roomName,
+                roomNumber: booking.roomNumber,
+                bookingDate: booking.bookingDate,
+              };
+            }),
+          );
+
+          return {
+            username: user.username,
+            email: user.email,
+            bookings: userBookings,
+          };
+        }),
+      );
+
+      return bookings;
+    } catch (error) {
+      console.error('Error fetching booking details:', error);
+      throw new HttpException(
+        'Something went wrong while fetching user booking details',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
   // async getRoomDetails(usersType: number, roomNumber: number, dateObj: Date) {
   //   try {
   //     if (usersType === 1) {
   //       const room = await this.roomModel.findOne({ roomNumber }).exec();
 
   //       if (!room) {
-  //         return ApiResponse(null, 'Room is not found');
-  //       } else {
-  //         const bookings = await this.bookingModel
-  //           .findOne({
-  //             $and: [
-  //               {
-  //                 roomNumber: roomNumber,
-  //               },
-  //               {
-  //                 bookingDate: dateObj,
-  //               },
-  //             ],
-  //           })
-  //           .exec();
+  //         return ApiResponse(null, 'Room not found');
+  //       }
 
-  //         if (!bookings) {
-  //           return ApiResponse(
-  //             null,
-  //             'No existing bookings of the room for the date.',
-  //           );
-  //         } else {
-  //           const booking = bookings.map((booking) => ({
-  //             const user = await this.userModel.findById(booking.userId).exec();
+  //       const bookings = await this.bookingModel
+  //         .find({
+  //           roomNumber: roomNumber,
+  //           bookingDate: dateObj,
+  //         })
+  //         .exec();
 
-  //             userDetails: {
-  //               username: user?.username,
-  //               email: user?.email,
-  //             }
+  //       if (!bookings.length) {
+  //         return ApiResponse(
+  //           null,
+  //           'No existing bookings for the room on the specified date.',
+  //         );
+  //       }
 
+  //       const bookingDetails = await Promise.all(
+  //         bookings.map(async (booking) => {
+  //           const user = await this.userModel.findById(booking.userId).exec();
+
+  //           const availableSeatsOfTheRoom =
+  //             await this.findAvailableSeatsOfARoom(roomNumber, dateObj);
+
+  //           return {
   //             roomName: booking.roomName,
   //             roomNumber: booking.roomNumber,
-  //             bookingDate: booking.bookingDate,
-  //             bookingId: booking._id,
-  //           }));
-            
-  //           return booking;
-  //         }
-  //       }
+  //             availableSeats: availableSeatsOfTheRoom.availableSeats,
+  //             booking: [
+  //               {
+  //                 userDetails: {
+  //                   username: user?.username,
+  //                   email: user?.email,
+  //                 },
+  //                 bookingDate: booking.bookingDate,
+  //                 bookingId: booking._id,
+  //               },
+  //             ],
+  //           };
+  //         }),
+  //       );
+
+  //       return bookingDetails;
   //     } else {
   //       return ApiResponse(
   //         null,
@@ -222,51 +286,63 @@ export class RoomBookingService {
   //       );
   //     }
   //   } catch (error) {
-  //     console.log('Error: ', error);
+  //     console.error('Error: ', error);
   //     throw new UnprocessableEntityException(
-  //       'Something went wrong while fetch room details!',
+  //       'Something went wrong while fetching room details!',
   //     );
   //   }
   // }
 
   async getRoomDetails(usersType: number, roomNumber: number, dateObj: Date) {
     try {
-      if (usersType === 1) {
-        const room = await this.roomModel.findOne({ roomNumber }).exec();
+      if (usersType !== 1) {
+        return ApiResponse(
+          null,
+          'Fetching room details service is not available for you!',
+        );
+      }
   
-        if (!room) {
-          return ApiResponse(null, 'Room not found');
-        }
+      const room = await this.roomModel.findOne({ roomNumber }).exec();
+      if (!room) {
+        return ApiResponse(null, 'Room not found');
+      }
   
-        const bookings = await this.bookingModel.find({
+      const bookings = await this.bookingModel
+        .find({
           roomNumber: roomNumber,
           bookingDate: dateObj,
-        }).exec();
+        })
+        .exec();
   
-        if (!bookings.length) {
-          return ApiResponse(null, 'No existing bookings for the room on the specified date.');
-        }
-  
-        const bookingDetails = await Promise.all(bookings.map(async (booking) => {
-          const user = await this.userModel.findById(booking.userId).exec();
-  
-          return {
-            userDetails: {
-              username: user?.username,
-              email: user?.email,
-            },
-            roomName: booking.roomName,
-            roomNumber: booking.roomNumber,
-            bookingDate: booking.bookingDate,
-            bookingId: booking._id,
-          };
-        }));
-  
-        return bookingDetails;
-  
-      } else {
-        return ApiResponse(null, 'Fetching room details service is not available for you!');
+      if (!bookings.length) {
+        return ApiResponse(
+          null,
+          'No existing bookings for the room on the specified date.',
+        );
       }
+  
+      const availableSeatsOfTheRoom = await this.findAvailableSeatsOfARoom(roomNumber, dateObj);
+  
+      const bookingDetails = {
+        roomName: room.roomName,
+        roomNumber: room.roomNumber,
+        availableSeats: availableSeatsOfTheRoom.availableSeats,
+        booking: await Promise.all(
+          bookings.map(async (booking) => {
+            const user = await this.userModel.findById(booking.userId).exec();
+            return {
+              userDetails: {
+                username: user?.username,
+                email: user?.email,
+              },
+              bookingDate: booking.bookingDate,
+              bookingId: booking._id,
+            };
+          })
+        ),
+      };
+  
+      return bookingDetails;
     } catch (error) {
       console.error('Error: ', error);
       throw new UnprocessableEntityException(

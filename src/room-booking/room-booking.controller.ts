@@ -5,6 +5,7 @@ import {
   Get,
   HttpException,
   HttpStatus,
+  Param,
   Post,
   Req,
   Request,
@@ -12,7 +13,7 @@ import {
 import { RoomBookingService } from './room-booking.service';
 import { ExpressRequest } from '../middlewares/auth.middleware';
 import { CreateRoomDto } from '../dto/createRoom.dto';
-import { parse } from 'date-fns';
+import { isValid, parse } from 'date-fns';
 import { RoomBookingDto } from '../dto/roomBooking.dto';
 import { ApiTags } from '@nestjs/swagger';
 import { ApiResponse } from '../responseTypes/ApiResponse';
@@ -93,11 +94,20 @@ export class RoomBookingController {
       if (!request.user) {
         throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
       }
-      const userId = request.user._id;
 
-      const response = await this.roomBookingService.getBookingDetails(userId);
+      if (request.user.usersType === 1) {
+        const response =
+          await this.roomBookingService.getAllUserBookingDetails();
 
-      return response;
+        return response;
+      } else {
+        const userId = request.user._id;
+
+        const response =
+          await this.roomBookingService.getUserBookingDetails(userId);
+
+        return response;
+      }
     } catch (error) {
       console.log('Error: ', error);
       throw new HttpException(
@@ -107,29 +117,28 @@ export class RoomBookingController {
     }
   }
 
-  @Get('getRoomDetails')
+  @Get('getRoomDetails/:roomNumber/:date')
   async getRoomDetails(
+    @Param('roomNumber') roomNumber: number,
+    @Param('date') date: string,
     @Request() request: ExpressRequest,
-    @Body() fetchRoomDetailsDto: FetchRoomDetailsDto,
   ) {
     try {
       if (!request.user) {
         throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
       }
 
-      const dateObj = parse(
-        fetchRoomDetailsDto.date,
-        'yyyy-MM-dd',
-        new Date(),
-      );
-      if (isNaN(dateObj.getTime())) {
-        throw new BadRequestException('Invalid booking date format.');
+
+      const dateObj = parse(date, 'yyyy-MM-dd', new Date());
+
+      if (!isValid(dateObj)) {
+        return ApiResponse(null, 'Invalid booking date format.');
       }
 
       const response = await this.roomBookingService.getRoomDetails(
         request.user.usersType,
-        fetchRoomDetailsDto.roomNumber,
-        dateObj
+        roomNumber,
+        dateObj,
       );
 
       return response;
@@ -138,6 +147,41 @@ export class RoomBookingController {
       throw new HttpException(
         'Something went wrong while fetching room details',
         HttpStatus.PROCESSING,
+      );
+    }
+  }
+
+  @Get('booking-availability/:roomNumber/:date')
+  async bookingAvailability(
+    @Param('roomNumber') roomNumber: number,
+    @Param('date') date: string,
+    @Req() request: ExpressRequest,
+  ) {
+    if (!request.user) {
+      throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
+    }
+
+    try {
+      if (!date) {
+        return ApiResponse(null, 'Date is required.')
+      }
+
+      const dateObj = parse(date, 'yyyy-MM-dd', new Date());
+
+      if (!isValid(dateObj)) {
+        return ApiResponse(null, 'Invalid booking date format.');
+      }
+
+      const response = await this.roomBookingService.findAvailableSeatsOfARoom(
+        roomNumber,
+        dateObj,
+      );
+
+      return response;
+    } catch (error) {
+      console.log('Error: ', error);
+      throw new BadRequestException(
+        'Something went wrong while fetching booking-availability of a room, Please check input parameters.',
       );
     }
   }

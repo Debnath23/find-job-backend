@@ -1,0 +1,25 @@
+[
+  {
+    "roomName": "Testing10",
+    "roomNumber": 114,
+    "availableSeats": 0,
+    "booking": [
+      {
+        "userDetails": {
+          "username": "Debnath5",
+          "email": "debnath5@gmail.com"
+        },
+        "bookingDate": "2024-08-17T18:30:00.000Z",
+        "bookingId": "66b375e18fa9a12d14693ff1"
+      },
+      {
+        "userDetails": {
+          "username": "Debnath6",
+          "email": "debnath6@gmail.com"
+        },
+        "bookingDate": "2024-08-17T18:30:00.000Z",
+        "bookingId": "66b375e18fa9a12d14693ff2"
+      }
+    ]
+  }
+]
