@@ -1,12 +1,12 @@
-import { IsNotEmpty, IsNumber } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateRoomDto {
-  @IsNotEmpty()
+  @ApiProperty()
   readonly roomName: string;
 
-  @IsNumber()
+  @ApiProperty()
   readonly roomNumber: number;
 
-  @IsNumber()
+  @ApiProperty()
   readonly seatCapacity: number;
 }

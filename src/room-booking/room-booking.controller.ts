@@ -18,7 +18,6 @@ import { isValid, parse } from 'date-fns';
 import { RoomBookingDto } from '../dto/roomBooking.dto';
 import { ApiTags } from '@nestjs/swagger';
 import { ApiResponse } from '../responseTypes/ApiResponse';
-import { FetchRoomDetailsDto } from '../dto/fetchRoomDetails.dto';
 
 @Controller('room-booking')
 @ApiTags('Room Booking')
@@ -31,7 +30,7 @@ export class RoomBookingController {
     @Body() createRoomDto: CreateRoomDto,
   ) {
     if (!request.user) {
-      throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
+      return ApiResponse(null, 'Unauthorized: token may be expired!');
     }
 
     const response = await this.roomBookingService.createRoom(
@@ -48,7 +47,7 @@ export class RoomBookingController {
     @Body() roomBookingDto: RoomBookingDto,
   ) {
     if (!request.user) {
-      throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
+      return ApiResponse(null, 'Unauthorized: token may be expired!');
     }
 
     const userId = request.user._id;
@@ -93,7 +92,7 @@ export class RoomBookingController {
   async getBookingDetails(@Req() request: ExpressRequest) {
     try {
       if (!request.user) {
-        throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
+        return ApiResponse(null, 'Unauthorized');
       }
 
       if (request.user.usersType === 1) {
@@ -126,7 +125,7 @@ export class RoomBookingController {
   ) {
     try {
       if (!request.user) {
-        throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
+        return ApiResponse(null, 'Unauthorized: token may be expired!');
       }
 
       let dateObj: Date | null = null;
@@ -174,7 +173,7 @@ export class RoomBookingController {
     @Req() request: ExpressRequest,
   ) {
     if (!request.user) {
-      throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
+      return ApiResponse(null, 'Unauthorized: token may be expired!');
     }
 
     try {

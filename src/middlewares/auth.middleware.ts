@@ -3,6 +3,7 @@ import { UsersEntity } from '../entities/users.entity';
 import { NextFunction, Response } from 'express';
 import { UsersService } from '../users/users.service';
 import { verify } from 'jsonwebtoken';
+import { ApiResponse } from '../responseTypes/ApiResponse';
 
 export interface ExpressRequest extends Request {
   user?: UsersEntity;
@@ -15,10 +16,9 @@ export class AuthMiddleware implements NestMiddleware {
   async use(req: ExpressRequest, res: Response, next: NextFunction) {
     const authHeader = req.headers['authorization'];
     if (!authHeader) {
-      console.warn('No authorization header found');
       req.user = null;
       next();
-      return;
+      return ApiResponse(null, 'No authentication header is found!');
     }
 
     const token = authHeader.split(' ')[1];
@@ -28,17 +28,17 @@ export class AuthMiddleware implements NestMiddleware {
 
       const user = await this.usersService.findByEmail(decoded.email);
       if (!user) {
-        console.warn(`User not found for email: ${decoded.email}`);
         req.user = null;
+        return ApiResponse(null, `User not found for email: ${decoded.email}`)
       } else {
         req.user = user;
       }
 
       next();
     } catch (error) {
-      console.error('JWT Verification Error:', error.message);
       req.user = null;
       next();
+      return ApiResponse(null, `JWT Verification Error: ${error.message}`)
     }
   }
 }
