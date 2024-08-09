@@ -200,4 +200,22 @@ export class RoomBookingController {
       );
     }
   }
+
+  @Get('checkExistingRooms')
+  async checkExistingRooms(@Req() request: ExpressRequest) {
+    try {
+      if (!request.user) {
+        return ApiResponse(null, 'Unauthorized');
+      }
+      const response = await this.roomBookingService.checkExistingRooms();
+
+      return response;
+    } catch (error) {
+      console.log('Error: ', error);
+      throw new HttpException(
+        'Something went wrong while checking existing rooms!',
+        HttpStatus.PROCESSING,
+      );
+    }
+  }
 }

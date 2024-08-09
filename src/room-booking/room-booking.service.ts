@@ -397,4 +397,29 @@ export class RoomBookingService {
       );
     }
   }
+
+  async checkExistingRooms() {
+    try {
+      const roomEntity = await this.roomModel.find().exec();
+
+      if (!roomEntity || roomEntity.length === 0) {
+        return ApiResponse(null, 'No room exists.');
+      }
+
+      const existingRooms = roomEntity.map((room) => {
+        return {
+          roomNumber: room.roomNumber,
+          roomName: room.roomName,
+        };
+      });
+
+      return existingRooms;
+    } catch (error) {
+      console.error('Error while checking existing rooms:', error);
+      return ApiResponse(
+        null,
+        'Something went wrong while checking existing rooms!',
+      );
+    }
+  }
 }
