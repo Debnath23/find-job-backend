@@ -157,6 +157,89 @@ export class RoomBookingService {
     }
   }
 
+  async getUserBookingDetailsForAParticularDateAndRoom(userId: Types.ObjectId, roomNumber: number, dateObj: Date){
+    try {
+      const user = await this.userModel.findById(userId).exec();
+      if (!user) {
+        throw new NotFoundException('User not found!');
+      }
+
+      const userBooking = await this.bookingModel
+        .findOne({ userId: userId, roomNumber: roomNumber,
+          bookingDate: dateObj,})
+        .exec();
+
+      if (!userBooking) {
+        return ApiResponse(null, 'No bookings found for this user!');
+      }
+
+        const bookingDetails = {
+          roomName: userBooking.roomName,
+          roomNumber: userBooking.roomNumber,
+          bookingDate: userBooking.bookingDate,
+          bookingId: userBooking._id,
+        };
+
+      return bookingDetails;
+    } catch (error) {
+      console.error('Error fetching booking details of the user for a particular room and a particular date:', error);
+      throw new HttpException(
+        'Something went wrong while fetching user booking details for a particular room and a particular date.',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async getUserBookingDetailsForAParticularRoom(userId: Types.ObjectId,  roomNumber: number){
+    try {
+      const user = await this.userModel.findById(userId).exec();
+      if (!user) {
+        throw new NotFoundException('User not found!');
+      }
+
+      const bookingEntities = await this.bookingModel
+        .find({ userId: userId, roomNumber: roomNumber })
+        .exec();
+      if (!bookingEntities || bookingEntities.length === 0) {
+        return ApiResponse(null, 'No bookings found for this user!');
+      }
+
+      const dateTodayUTC = new Date().toISOString();
+
+      const pastBookings = [];
+      const upcomingBookings = [];
+
+      bookingEntities.forEach((booking) => {
+        const bookingDateUTC = new Date(booking.bookingDate).toISOString();
+
+        const bookingDetails = {
+          bookingDate: bookingDateUTC,
+          bookingId: booking._id,
+        };
+
+        if (bookingDateUTC < dateTodayUTC) {
+          pastBookings.push(bookingDetails);
+        } else {
+          upcomingBookings.push(bookingDetails);
+        }
+        
+      });
+
+      return {
+        roomName: bookingEntities[0].roomName,
+        roomNumber: bookingEntities[0].roomNumber,
+        pastBookings,
+        upcomingBookings,
+      };
+    } catch (error) {
+      console.error('Error fetching booking details:', error);
+      throw new HttpException(
+        'Something went wrong while fetching user booking details',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
   async getUserBookingDetails(userId: Types.ObjectId) {
     try {
       const user = await this.userModel.findById(userId).exec();
@@ -171,14 +254,32 @@ export class RoomBookingService {
         return ApiResponse(null, 'No bookings found for this user!');
       }
 
-      const bookings = bookingEntities.map((booking) => ({
-        roomName: booking.roomName,
-        roomNumber: booking.roomNumber,
-        bookingDate: booking.bookingDate,
-        bookingId: booking._id,
-      }));
+      const dateTodayUTC = new Date().toISOString();
 
-      return bookings;
+      const pastBookings = [];
+      const upcomingBookings = [];
+
+      bookingEntities.forEach((booking) => {
+        const bookingDateUTC = new Date(booking.bookingDate).toISOString();
+
+        const bookingDetails = {
+          roomName: booking.roomName,
+          roomNumber: booking.roomNumber,
+          bookingDate: bookingDateUTC,
+          bookingId: booking._id,
+        };
+
+        if (bookingDateUTC < dateTodayUTC) {
+          pastBookings.push(bookingDetails);
+        } else {
+          upcomingBookings.push(bookingDetails);
+        }
+      });
+
+      return {
+        pastBookings,
+        upcomingBookings,
+      };
     } catch (error) {
       console.error('Error fetching booking details:', error);
       throw new HttpException(
@@ -196,31 +297,52 @@ export class RoomBookingService {
         return ApiResponse(null, 'No bookings found!');
       }
 
-      const bookings = await Promise.all(
+      const dateTodayUTC = new Date().toISOString();
+
+      const allUserBookings = await Promise.all(
         userEntities.map(async (user) => {
-          const userBookings = await Promise.all(
+          const pastBookings = [];
+          const upcomingBookings = [];
+
+          await Promise.all(
             user.bookings.map(async (bookingId) => {
               const booking = await this.bookingModel
                 .findById(bookingId)
                 .exec();
-              return {
-                bookingId: booking._id,
+              const bookingDateUTC = new Date(
+                booking.bookingDate,
+              ).toISOString();
+
+              const bookingDetails = {
                 roomName: booking.roomName,
                 roomNumber: booking.roomNumber,
-                bookingDate: booking.bookingDate,
+                bookingDate: bookingDateUTC,
+                bookingId: booking._id,
               };
+
+              if (bookingDateUTC < dateTodayUTC) {
+                pastBookings.push(bookingDetails);
+              } else {
+                upcomingBookings.push(bookingDetails);
+              }
             }),
           );
 
           return {
             username: user.username,
             email: user.email,
-            bookings: userBookings,
+            bookings: {
+              pastBookings,
+              upcomingBookings,
+            },
           };
         }),
       );
 
-      return bookings;
+      return ApiResponse(
+        allUserBookings,
+        'User bookings retrieved successfully',
+      );
     } catch (error) {
       console.error('Error fetching booking details:', error);
       throw new HttpException(
@@ -264,10 +386,12 @@ export class RoomBookingService {
       );
 
       const bookingDetails = {
+        _id: room._id,
         roomName: room.roomName,
         roomNumber: room.roomNumber,
+        seatCapacity: room.seatCapacity,
         availableSeats: availableSeatsOfTheRoom.availableSeats,
-        booking: await Promise.all(
+        appliedCandidates: await Promise.all(
           bookings.map(async (booking) => {
             const user = await this.userModel.findById(booking.userId).exec();
             return {
@@ -316,9 +440,11 @@ export class RoomBookingService {
       }
 
       const bookingDetails = {
+        _id: room._id,
         roomName: room.roomName,
         roomNumber: room.roomNumber,
-        booking: await Promise.all(
+        seatCapacity: room.seatCapacity,
+        appliedCandidates: await Promise.all(
           bookings.map(async (booking) => {
             const user = await this.userModel.findById(booking.userId).exec();
             return {

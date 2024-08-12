@@ -22,7 +22,7 @@ import { ApiResponse } from '../responseTypes/ApiResponse';
 @Controller('room-booking')
 @ApiTags('Room Booking')
 export class RoomBookingController {
-  constructor(private readonly roomBookingService: RoomBookingService) {}
+  constructor(private readonly roomBookingService: RoomBookingService) { }
 
   @Post('create-room')
   async createRoom(
@@ -89,7 +89,10 @@ export class RoomBookingController {
   }
 
   @Get('getBookingDetails')
-  async getBookingDetails(@Req() request: ExpressRequest) {
+  async getBookingDetails(
+    @Req() request: ExpressRequest,
+    @Query('roomNumber') roomNumber?: number,
+    @Query('date') date?: string) {
     try {
       if (!request.user) {
         return ApiResponse(null, 'Unauthorized');
@@ -103,10 +106,35 @@ export class RoomBookingController {
       } else {
         const userId = request.user._id;
 
-        const response =
-          await this.roomBookingService.getUserBookingDetails(userId);
+        let dateObj: Date | null = null;
 
-        return response;
+        if (date) {
+          dateObj = parse(date, 'yyyy-MM-dd', new Date());
+
+          if (!isValid(dateObj)) {
+            return ApiResponse(null, 'Invalid booking date format.');
+          }
+        }
+
+        if (roomNumber && dateObj) {
+          const response = await this.roomBookingService.getUserBookingDetailsForAParticularDateAndRoom(
+            userId,
+            roomNumber,
+            dateObj,
+          );
+          return response;
+        } else if (roomNumber) {
+          const response = await this.roomBookingService.getUserBookingDetailsForAParticularRoom(
+            userId,
+            roomNumber,
+          );
+          return response;
+        } else {
+          const response = await this.roomBookingService.getUserBookingDetails(
+            userId
+          );
+          return response;
+        }
       }
     } catch (error) {
       console.log('Error: ', error);
