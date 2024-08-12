@@ -57,51 +57,6 @@ export class RoomBookingService {
     }
   }
 
-  // async bookRoom(
-  //   userId: Types.ObjectId,
-  //   roomNumber: number,
-  //   bookingDate: Date,
-  // ) {
-  //   try {
-  //     const availableSeatsResponse = await this.findAvailableSeatsOfARoom(
-  //       roomNumber,
-  //       bookingDate,
-  //     );
-
-  //     if (availableSeatsResponse.availableSeats > 0) {
-  //       const room = await this.roomModel.findOne({ roomNumber }).exec();
-
-  //       if (!room) {
-  //         throw new NotFoundException('Room is not found!');
-  //       }
-
-  //       const booking = new this.bookingModel({
-  //         userId: userId,
-  //         roomName: room.roomName,
-  //         roomNumber: roomNumber,
-  //         bookingDate: bookingDate,
-  //       });
-
-  //       await booking.save();
-  //       room.appliedCandidates.push(booking._id);
-  //       await room.save();
-
-  //       const user = await this.userModel.findById(userId).exec();
-
-  //       user.bookings.push(booking._id);
-  //       await user.save();
-
-  //       return ApiResponse(booking, 'Room booked successfully!');
-  //     } else {
-  //       return ApiResponse(null, 'Room is fully booked for the day!');
-  //     }
-  //   } catch (error) {
-  //     throw new UnprocessableEntityException(
-  //       'Something went wrong while book a room!',
-  //     );
-  //   }
-  // }
-
   async bookRoom(
     userId: Types.ObjectId,
     roomNumber: number,
