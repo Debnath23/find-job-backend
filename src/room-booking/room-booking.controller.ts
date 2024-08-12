@@ -41,6 +41,53 @@ export class RoomBookingController {
     return response;
   }
 
+  // @Post('book')
+  // async bookRoom(
+  //   @Req() request: ExpressRequest,
+  //   @Body() roomBookingDto: RoomBookingDto,
+  // ) {
+  //   if (!request.user) {
+  //     return ApiResponse(null, 'Unauthorized: token may be expired!');
+  //   }
+
+  //   const userId = request.user._id;
+
+  //   try {
+  //     const bookingDateObj = parse(
+  //       roomBookingDto.bookingDate,
+  //       'yyyy-MM-dd',
+  //       new Date(),
+  //     );
+  //     if (isNaN(bookingDateObj.getTime())) {
+  //       throw new BadRequestException('Invalid booking date format.');
+  //     }
+
+  //     const hasAlreadyApplied =
+  //       await this.roomBookingService.hasUserAlreadyAppliedForDate(
+  //         userId,
+  //         bookingDateObj,
+  //       );
+
+  //     if (hasAlreadyApplied) {
+  //       return ApiResponse(
+  //         null,
+  //         'User cannot book the same or different rooms more than once on the same date.',
+  //       );
+  //     }
+
+  //     const response = await this.roomBookingService.bookRoom(
+  //       userId,
+  //       roomBookingDto.roomNumber,
+  //       bookingDateObj,
+  //     );
+
+  //     return response;
+  //   } catch (error) {
+  //     console.log('Error: ', error);
+  //     throw new BadRequestException('There is no room for booking.');
+  //   }
+  // }
+
   @Post('book')
   async bookRoom(
     @Req() request: ExpressRequest,
@@ -58,14 +105,23 @@ export class RoomBookingController {
         'yyyy-MM-dd',
         new Date(),
       );
+
       if (isNaN(bookingDateObj.getTime())) {
         throw new BadRequestException('Invalid booking date format.');
       }
 
+      const bookingDateUTC = new Date(
+        Date.UTC(
+          bookingDateObj.getFullYear(),
+          bookingDateObj.getMonth(),
+          bookingDateObj.getDate(),
+        ),
+      );
+
       const hasAlreadyApplied =
         await this.roomBookingService.hasUserAlreadyAppliedForDate(
           userId,
-          bookingDateObj,
+          bookingDateUTC,
         );
 
       if (hasAlreadyApplied) {
@@ -78,7 +134,7 @@ export class RoomBookingController {
       const response = await this.roomBookingService.bookRoom(
         userId,
         roomBookingDto.roomNumber,
-        bookingDateObj,
+        bookingDateUTC,
       );
 
       return response;

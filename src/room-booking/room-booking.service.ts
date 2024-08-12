@@ -57,51 +57,104 @@ export class RoomBookingService {
     }
   }
 
+  // async bookRoom(
+  //   userId: Types.ObjectId,
+  //   roomNumber: number,
+  //   bookingDate: Date,
+  // ) {
+  //   try {
+  //     const availableSeatsResponse = await this.findAvailableSeatsOfARoom(
+  //       roomNumber,
+  //       bookingDate,
+  //     );
+
+  //     if (availableSeatsResponse.availableSeats > 0) {
+  //       const room = await this.roomModel.findOne({ roomNumber }).exec();
+
+  //       if (!room) {
+  //         throw new NotFoundException('Room is not found!');
+  //       }
+
+  //       const booking = new this.bookingModel({
+  //         userId: userId,
+  //         roomName: room.roomName,
+  //         roomNumber: roomNumber,
+  //         bookingDate: bookingDate,
+  //       });
+
+  //       await booking.save();
+  //       room.appliedCandidates.push(booking._id);
+  //       await room.save();
+
+  //       const user = await this.userModel.findById(userId).exec();
+
+  //       user.bookings.push(booking._id);
+  //       await user.save();
+
+  //       return ApiResponse(booking, 'Room booked successfully!');
+  //     } else {
+  //       return ApiResponse(null, 'Room is fully booked for the day!');
+  //     }
+  //   } catch (error) {
+  //     throw new UnprocessableEntityException(
+  //       'Something went wrong while book a room!',
+  //     );
+  //   }
+  // }
+
   async bookRoom(
     userId: Types.ObjectId,
     roomNumber: number,
     bookingDate: Date,
   ) {
     try {
+      const bookingDateUTC = new Date(
+        Date.UTC(
+          bookingDate.getFullYear(),
+          bookingDate.getMonth(),
+          bookingDate.getDate()
+        )
+      );
+  
       const availableSeatsResponse = await this.findAvailableSeatsOfARoom(
         roomNumber,
-        bookingDate,
+        bookingDateUTC,
       );
-
+  
       if (availableSeatsResponse.availableSeats > 0) {
         const room = await this.roomModel.findOne({ roomNumber }).exec();
-
+  
         if (!room) {
           throw new NotFoundException('Room is not found!');
         }
-
+  
         const booking = new this.bookingModel({
           userId: userId,
           roomName: room.roomName,
           roomNumber: roomNumber,
-          bookingDate: bookingDate,
+          bookingDate: bookingDateUTC,
         });
-
+  
         await booking.save();
         room.appliedCandidates.push(booking._id);
         await room.save();
-
+  
         const user = await this.userModel.findById(userId).exec();
-
+  
         user.bookings.push(booking._id);
         await user.save();
-
+  
         return ApiResponse(booking, 'Room booked successfully!');
       } else {
         return ApiResponse(null, 'Room is fully booked for the day!');
       }
     } catch (error) {
       throw new UnprocessableEntityException(
-        'Something went wrong while book a room!',
+        'Something went wrong while booking a room!',
       );
     }
   }
-
+  
   async hasUserAlreadyAppliedForDate(
     userId: Types.ObjectId,
     bookingDate: Date,
@@ -522,53 +575,74 @@ export class RoomBookingService {
           'Fetching room details service is not available for you!',
         );
       }
-
+  
       const room = await this.roomModel.findOne({ roomNumber }).exec();
       if (!room) {
         return ApiResponse(null, 'Room not found');
       }
-
+  
       const bookings = await this.bookingModel
         .find({
           roomNumber: roomNumber,
           bookingDate: dateObj,
         })
         .exec();
-
+  
       if (!bookings.length) {
         return ApiResponse(
           null,
           'No existing bookings for the room on the specified date.',
         );
       }
-
+  
       const availableSeatsOfTheRoom = await this.findAvailableSeatsOfARoom(
         roomNumber,
         dateObj,
       );
-
-      const bookingDetails = {
+  
+      const dateTodayUTC = new Date().toISOString();
+      const appliedCandidates = [];
+  
+      await Promise.all(
+        bookings.map(async (booking) => {
+          const user = await this.userModel.findById(booking.userId).exec();
+          const bookingDateUTC = new Date(
+            booking.bookingDate,
+          ).toISOString();
+  
+          const bookingDetails = {
+            userDetails: {
+              username: user?.username,
+              email: user?.email,
+            },
+            bookingDate: booking.bookingDate,
+            bookingId: booking._id,
+          };
+  
+          if (bookingDateUTC < dateTodayUTC) {
+            appliedCandidates.push({
+              ...bookingDetails,
+              bookingStatus: 'past',
+            });
+          } else {
+            appliedCandidates.push({
+              ...bookingDetails,
+              bookingStatus: 'upcoming',
+            });
+          }
+        }),
+      );
+  
+      const response = {
         _id: room._id,
         roomName: room.roomName,
         roomNumber: room.roomNumber,
         seatCapacity: room.seatCapacity,
         availableSeats: availableSeatsOfTheRoom.availableSeats,
-        appliedCandidates: await Promise.all(
-          bookings.map(async (booking) => {
-            const user = await this.userModel.findById(booking.userId).exec();
-            return {
-              userDetails: {
-                username: user?.username,
-                email: user?.email,
-              },
-              bookingDate: booking.bookingDate,
-              bookingId: booking._id,
-            };
-          }),
-        ),
+        appliedCandidates,
       };
-
-      return bookingDetails;
+  
+      return ApiResponse(response, 'Room details retrieved successfully');
     } catch (error) {
       console.error('Error: ', error);
       return ApiResponse(
@@ -586,42 +660,63 @@ export class RoomBookingService {
           'Fetching room details service is not available for you!',
         );
       }
-
+  
       const room = await this.roomModel.findOne({ roomNumber }).exec();
-
+  
       if (!room) {
         return ApiResponse(null, 'Room not found');
       }
-
+  
       const bookings = await this.bookingModel
         .find({ roomNumber: roomNumber })
         .exec();
-
+  
       if (!bookings || bookings.length === 0) {
         return ApiResponse(null, 'Bookings are not found!');
       }
-
-      const bookingDetails = {
+  
+      const dateTodayUTC = new Date().toISOString();
+      const appliedCandidates = [];
+  
+      await Promise.all(
+        bookings.map(async (booking) => {
+          const user = await this.userModel.findById(booking.userId).exec();
+          const bookingDateUTC = new Date(
+            booking.bookingDate,
+          ).toISOString();
+  
+          const bookingDetails = {
+            userDetails: {
+              username: user?.username,
+              email: user?.email,
+            },
+            bookingDate: booking.bookingDate,
+            bookingId: booking._id,
+          };
+  
+          if (bookingDateUTC < dateTodayUTC) {
+            appliedCandidates.push({
+              ...bookingDetails,
+              bookingStatus: 'past',
+            });
+          } else {
+            appliedCandidates.push({
+              ...bookingDetails,
+              bookingStatus: 'upcoming',
+            });
+          }
+        }),
+      );
+  
+      const response = {
         _id: room._id,
         roomName: room.roomName,
         roomNumber: room.roomNumber,
         seatCapacity: room.seatCapacity,
-        appliedCandidates: await Promise.all(
-          bookings.map(async (booking) => {
-            const user = await this.userModel.findById(booking.userId).exec();
-            return {
-              userDetails: {
-                username: user?.username,
-                email: user?.email,
-              },
-              bookingDate: booking.bookingDate,
-              bookingId: booking._id,
-            };
-          }),
-        ),
+        appliedCandidates,
       };
-
-      return bookingDetails;
+  
+      return ApiResponse(response, 'Room details retrieved successfully');
     } catch (error) {
       console.error('Error fetching room details:', error);
       return ApiResponse(
@@ -639,23 +734,31 @@ export class RoomBookingService {
           'Fetching room details service is not available for you!',
         );
       }
-
+  
       const roomEntity = await this.roomModel.find().exec();
-
+  
       if (!roomEntity || roomEntity.length === 0) {
         return ApiResponse(null, 'No room exists.');
       }
-
+  
+      const dateTodayUTC = new Date().toISOString();
+  
       const roomDetails = await Promise.all(
         roomEntity.map(async (room) => {
           const bookings = await this.bookingModel
             .find({ _id: { $in: room.appliedCandidates } })
             .exec();
-
-          const appliedCandidates = await Promise.all(
+  
+          const appliedCandidates = [];
+  
+          await Promise.all(
             bookings.map(async (booking) => {
               const user = await this.userModel.findById(booking.userId).exec();
-              return {
+              const bookingDateUTC = new Date(
+                booking.bookingDate,
+              ).toISOString();
+  
+              const bookingDetails = {
                 userDetails: {
                   username: user?.username,
                   email: user?.email,
@@ -663,9 +766,21 @@ export class RoomBookingService {
                 bookingDate: booking.bookingDate,
                 bookingId: booking._id,
               };
+  
+              if (bookingDateUTC < dateTodayUTC) {
+                appliedCandidates.push({
+                  ...bookingDetails,
+                  bookingStatus: 'past',
+                });
+              } else {
+                appliedCandidates.push({
+                  ...bookingDetails,
+                  bookingStatus: 'upcoming',
+                });
+              }
             }),
           );
-
+  
           return {
             _id: room._id,
             roomName: room.roomName,
@@ -675,8 +790,8 @@ export class RoomBookingService {
           };
         }),
       );
-
-      return roomDetails;
+  
+      return ApiResponse(roomDetails, 'Room details retrieved successfully');
     } catch (error) {
       console.error('Error fetching room details:', error);
       return ApiResponse(
