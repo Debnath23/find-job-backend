@@ -157,7 +157,11 @@ export class RoomBookingService {
     }
   }
 
-  async getUserBookingDetailsForAParticularDateAndRoom(userId: Types.ObjectId, roomNumber: number, dateObj: Date){
+  async getUserBookingDetailsForAParticularDateAndRoom(
+    userId: Types.ObjectId,
+    roomNumber: number,
+    dateObj: Date,
+  ) {
     try {
       const user = await this.userModel.findById(userId).exec();
       if (!user) {
@@ -165,24 +169,30 @@ export class RoomBookingService {
       }
 
       const userBooking = await this.bookingModel
-        .findOne({ userId: userId, roomNumber: roomNumber,
-          bookingDate: dateObj,})
+        .findOne({
+          userId: userId,
+          roomNumber: roomNumber,
+          bookingDate: dateObj,
+        })
         .exec();
 
       if (!userBooking) {
         return ApiResponse(null, 'No bookings found for this user!');
       }
 
-        const bookingDetails = {
-          roomName: userBooking.roomName,
-          roomNumber: userBooking.roomNumber,
-          bookingDate: userBooking.bookingDate,
-          bookingId: userBooking._id,
-        };
+      const bookingDetails = {
+        roomName: userBooking.roomName,
+        roomNumber: userBooking.roomNumber,
+        bookingDate: userBooking.bookingDate,
+        bookingId: userBooking._id,
+      };
 
       return bookingDetails;
     } catch (error) {
-      console.error('Error fetching booking details of the user for a particular room and a particular date:', error);
+      console.error(
+        'Error fetching booking details of the user for a particular room and a particular date:',
+        error,
+      );
       throw new HttpException(
         'Something went wrong while fetching user booking details for a particular room and a particular date.',
         HttpStatus.INTERNAL_SERVER_ERROR,
@@ -190,7 +200,10 @@ export class RoomBookingService {
     }
   }
 
-  async getUserBookingDetailsForAParticularRoom(userId: Types.ObjectId,  roomNumber: number){
+  async getUserBookingDetailsForAParticularRoom(
+    userId: Types.ObjectId,
+    roomNumber: number,
+  ) {
     try {
       const user = await this.userModel.findById(userId).exec();
       if (!user) {
@@ -222,7 +235,6 @@ export class RoomBookingService {
         } else {
           upcomingBookings.push(bookingDetails);
         }
-        
       });
 
       return {
@@ -289,6 +301,156 @@ export class RoomBookingService {
     }
   }
 
+  async getAllUserBookingDetailsForAParticularDateAndRoom(
+    roomNumber: number,
+    date: Date,
+  ) {
+    try {
+      const userEntities = await this.userModel.find().exec();
+
+      if (!userEntities || userEntities.length === 0) {
+        return ApiResponse(null, 'No bookings found!');
+      }
+
+      const dateInUTC = new Date(date).toISOString();
+      const dateTodayUTC = new Date().toISOString();
+
+      const appliedCandidates = [];
+      let roomName: string | null = null;
+
+      await Promise.all(
+        userEntities.map(async (user) => {
+          const pastBookings = [];
+          const upcomingBookings = [];
+
+          const bookings = await this.bookingModel
+            .find({
+              userId: user._id,
+              roomNumber: roomNumber,
+              bookingDate: dateInUTC,
+            })
+            .exec();
+
+          if (bookings.length > 0) {
+            if (roomName === null) {
+              roomName = bookings[0].roomName;
+            }
+
+            bookings.forEach((booking) => {
+              const bookingDateUTC = new Date(
+                booking.bookingDate,
+              ).toISOString();
+
+              const bookingDetails = {
+                bookingId: booking._id,
+              };
+
+              if (bookingDateUTC < dateTodayUTC) {
+                pastBookings.push(bookingDetails);
+              } else {
+                upcomingBookings.push(bookingDetails);
+              }
+            });
+
+            appliedCandidates.push({
+              username: user.username,
+              email: user.email,
+              pastBookings,
+              upcomingBookings,
+            });
+          }
+        }),
+      );
+
+      const response = {
+        roomName: roomName || 'Unknown Room',
+        roomNumber: roomNumber.toString(),
+        date: dateInUTC,
+        appliedCandidates,
+      };
+
+      return ApiResponse(response, 'User bookings retrieved successfully');
+    } catch (error) {
+      console.error('Error fetching booking details:', error);
+      return ApiResponse(
+        null,
+        'Something went wrong while fetching user booking details for a particular room and particular date.',
+      );
+    }
+  }
+
+  async geAlltUserBookingDetailsForAParticularRoom(roomNumber: number) {
+    try {
+      const userEntities = await this.userModel.find().exec();
+
+      if (!userEntities || userEntities.length === 0) {
+        return ApiResponse(null, 'No bookings found!');
+      }
+
+      const dateTodayUTC = new Date().toISOString();
+
+      const appliedCandidates = [];
+      let roomName: string | null = null;
+
+      await Promise.all(
+        userEntities.map(async (user) => {
+          const pastBookings = [];
+          const upcomingBookings = [];
+
+          const bookings = await this.bookingModel
+            .find({
+              userId: user._id,
+              roomNumber: roomNumber,
+            })
+            .exec();
+
+          if (bookings.length > 0) {
+            if (roomName === null) {
+              roomName = bookings[0].roomName;
+            }
+
+            bookings.forEach((booking) => {
+              const bookingDateUTC = new Date(
+                booking.bookingDate,
+              ).toISOString();
+
+              const bookingDetails = {
+                bookingId: booking._id,
+              };
+
+              if (bookingDateUTC < dateTodayUTC) {
+                pastBookings.push(bookingDetails);
+              } else {
+                upcomingBookings.push(bookingDetails);
+              }
+            });
+
+            appliedCandidates.push({
+              username: user.username,
+              email: user.email,
+              pastBookings,
+              upcomingBookings,
+            });
+          }
+        }),
+      );
+
+      const response = {
+        roomName: roomName || 'Unknown Room',
+        roomNumber: roomNumber.toString(),
+        appliedCandidates,
+      };
+
+      return ApiResponse(response, 'User bookings retrieved successfully');
+    } catch (error) {
+      console.error('Error fetching booking details:', error);
+      return ApiResponse(
+        null,
+        'Something went wrong while fetching user booking details for a particular room.',
+      );
+    }
+  }
+
   async getAllUserBookingDetails() {
     try {
       const userEntities = await this.userModel.find().exec();
@@ -345,9 +507,9 @@ export class RoomBookingService {
       );
     } catch (error) {
       console.error('Error fetching booking details:', error);
-      throw new HttpException(
-        'Something went wrong while fetching user booking details',
-        HttpStatus.INTERNAL_SERVER_ERROR,
+      return ApiResponse(
+        null,
+        'Something went wrong while fetching all users booking details',
       );
     }
   }

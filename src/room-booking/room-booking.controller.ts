@@ -22,7 +22,7 @@ import { ApiResponse } from '../responseTypes/ApiResponse';
 @Controller('room-booking')
 @ApiTags('Room Booking')
 export class RoomBookingController {
-  constructor(private readonly roomBookingService: RoomBookingService) { }
+  constructor(private readonly roomBookingService: RoomBookingService) {}
 
   @Post('create-room')
   async createRoom(
@@ -92,47 +92,63 @@ export class RoomBookingController {
   async getBookingDetails(
     @Req() request: ExpressRequest,
     @Query('roomNumber') roomNumber?: number,
-    @Query('date') date?: string) {
+    @Query('date') date?: string,
+  ) {
     try {
       if (!request.user) {
         return ApiResponse(null, 'Unauthorized');
       }
 
-      if (request.user.usersType === 1) {
-        const response =
-          await this.roomBookingService.getAllUserBookingDetails();
+      const userId = request.user._id;
 
-        return response;
-      } else {
-        const userId = request.user._id;
+      let dateObj: Date | null = null;
 
-        let dateObj: Date | null = null;
+      if (date) {
+        dateObj = parse(date, 'yyyy-MM-dd', new Date());
 
-        if (date) {
-          dateObj = parse(date, 'yyyy-MM-dd', new Date());
-
-          if (!isValid(dateObj)) {
-            return ApiResponse(null, 'Invalid booking date format.');
-          }
+        if (!isValid(dateObj)) {
+          return ApiResponse(null, 'Invalid booking date format.');
         }
+      }
 
+      if (request.user.usersType === 1) {
         if (roomNumber && dateObj) {
-          const response = await this.roomBookingService.getUserBookingDetailsForAParticularDateAndRoom(
-            userId,
-            roomNumber,
-            dateObj,
-          );
+          const response =
+            await this.roomBookingService.getAllUserBookingDetailsForAParticularDateAndRoom(
+              roomNumber,
+              dateObj,
+            );
           return response;
         } else if (roomNumber) {
-          const response = await this.roomBookingService.getUserBookingDetailsForAParticularRoom(
-            userId,
-            roomNumber,
-          );
+          const response =
+            await this.roomBookingService.geAlltUserBookingDetailsForAParticularRoom(
+              roomNumber,
+            );
           return response;
         } else {
-          const response = await this.roomBookingService.getUserBookingDetails(
-            userId
-          );
+          const response =
+            await this.roomBookingService.getAllUserBookingDetails();
+          return response;
+        }
+      } else {
+        if (roomNumber && dateObj) {
+          const response =
+            await this.roomBookingService.getUserBookingDetailsForAParticularDateAndRoom(
+              userId,
+              roomNumber,
+              dateObj,
+            );
+          return response;
+        } else if (roomNumber) {
+          const response =
+            await this.roomBookingService.getUserBookingDetailsForAParticularRoom(
+              userId,
+              roomNumber,
+            );
+          return response;
+        } else {
+          const response =
+            await this.roomBookingService.getUserBookingDetails(userId);
           return response;
         }
       }
