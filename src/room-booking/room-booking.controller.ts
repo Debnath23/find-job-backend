@@ -102,8 +102,18 @@ export class RoomBookingController {
     @Req() request: ExpressRequest,
     @Query('roomNumber') roomNumber?: number,
     @Query('date') date?: string,
+    @Query('limit') limit?: number,
+    @Query('offset') offset?: number,
+    @Query('bookingLimit') bookingLimit?: number,
+    @Query('bookingOffset') bookingOffset?: number,
   ) {
     try {
+      const limitVal = limit ? parseInt(limit.toString(), 10) : 10;
+      const offsetVal = offset ? parseInt(offset.toString(), 10) : 0;
+
+      const bookingLimitVal = bookingLimit ? parseInt(bookingLimit.toString(), 10) : 10;
+      const bookingOffsetVal = bookingOffset ? parseInt(bookingOffset.toString(), 10) : 0;
+
       if (!request.user) {
         return ApiResponse(null, 'Unauthorized');
       }
@@ -153,11 +163,14 @@ export class RoomBookingController {
             await this.roomBookingService.getUserBookingDetailsForAParticularRoom(
               userId,
               roomNumber,
+              limitVal,
+              offsetVal
             );
           return response;
         } else {
           const response =
-            await this.roomBookingService.getUserBookingDetails(userId);
+            await this.roomBookingService.getUserBookingDetails(userId, limitVal,
+              offsetVal);
           return response;
         }
       }

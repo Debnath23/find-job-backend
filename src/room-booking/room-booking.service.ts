@@ -211,6 +211,8 @@ export class RoomBookingService {
   async getUserBookingDetailsForAParticularRoom(
     userId: Types.ObjectId,
     roomNumber: number,
+    limitVal: number,
+    offsetVal: number,
   ) {
     try {
       const user = await this.userModel.findById(userId).exec();
@@ -218,8 +220,14 @@ export class RoomBookingService {
         throw new NotFoundException('User not found!');
       }
 
+      const totalCount = await this.bookingModel
+        .countDocuments({ userId: userId, roomNumber: roomNumber })
+        .exec();
+
       const bookingEntities = await this.bookingModel
         .find({ userId: userId, roomNumber: roomNumber })
+        .limit(limitVal)
+        .skip(offsetVal)
         .exec();
       if (!bookingEntities || bookingEntities.length === 0) {
         return ApiResponse(null, 'No bookings found for this user!');
@@ -250,6 +258,9 @@ export class RoomBookingService {
         roomNumber: bookingEntities[0].roomNumber,
         pastBookings,
         upcomingBookings,
+        totalBookings: totalCount,
+        limit: limitVal,
+        offset: offsetVal,
       };
     } catch (error) {
       console.error('Error fetching booking details:', error);
@@ -260,15 +271,25 @@ export class RoomBookingService {
     }
   }
 
-  async getUserBookingDetails(userId: Types.ObjectId) {
+  async getUserBookingDetails(
+    userId: Types.ObjectId,
+    limitVal: number,
+    offsetVal: number,
+  ) {
     try {
       const user = await this.userModel.findById(userId).exec();
       if (!user) {
         throw new NotFoundException('User not found!');
       }
 
+      const totalCount = await this.bookingModel
+        .countDocuments({ userId: userId })
+        .exec();
+
       const bookingEntities = await this.bookingModel
         .find({ userId: userId })
+        .limit(limitVal)
+        .skip(offsetVal)
         .exec();
       if (!bookingEntities || bookingEntities.length === 0) {
         return ApiResponse(null, 'No bookings found for this user!');
@@ -299,6 +320,9 @@ export class RoomBookingService {
       return {
         pastBookings,
         upcomingBookings,
+        totalBookings: totalCount,
+        limit: limitVal,
+        offset: offsetVal,
       };
     } catch (error) {
       console.error('Error fetching booking details:', error);
@@ -721,7 +745,7 @@ export class RoomBookingService {
     limitVal: number,
     offsetVal: number,
     bookingLimitVal: number,
-    bookingOffsetVal: number
+    bookingOffsetVal: number,
   ) {
     try {
       if (usersType !== 1) {
