@@ -67,38 +67,38 @@ export class RoomBookingService {
         Date.UTC(
           bookingDate.getFullYear(),
           bookingDate.getMonth(),
-          bookingDate.getDate()
-        )
+          bookingDate.getDate(),
+        ),
       );
-  
+
       const availableSeatsResponse = await this.findAvailableSeatsOfARoom(
         roomNumber,
         bookingDateUTC,
       );
-  
+
       if (availableSeatsResponse.availableSeats > 0) {
         const room = await this.roomModel.findOne({ roomNumber }).exec();
-  
+
         if (!room) {
           throw new NotFoundException('Room is not found!');
         }
-  
+
         const booking = new this.bookingModel({
           userId: userId,
           roomName: room.roomName,
           roomNumber: roomNumber,
           bookingDate: bookingDateUTC,
         });
-  
+
         await booking.save();
         room.appliedCandidates.push(booking._id);
         await room.save();
-  
+
         const user = await this.userModel.findById(userId).exec();
-  
+
         user.bookings.push(booking._id);
         await user.save();
-  
+
         return ApiResponse(booking, 'Room booked successfully!');
       } else {
         return ApiResponse(null, 'Room is fully booked for the day!');
@@ -109,7 +109,7 @@ export class RoomBookingService {
       );
     }
   }
-  
+
   async hasUserAlreadyAppliedForDate(
     userId: Types.ObjectId,
     bookingDate: Date,
@@ -522,7 +522,13 @@ export class RoomBookingService {
     }
   }
 
-  async getRoomDetails(usersType: number, roomNumber: number, dateObj: Date) {
+  async getRoomDetails(
+    usersType: number,
+    roomNumber: number,
+    dateObj: Date,
+    limitVal: number,
+    offsetVal: number,
+  ) {
     try {
       if (usersType !== 1) {
         return ApiResponse(
@@ -530,41 +536,45 @@ export class RoomBookingService {
           'Fetching room details service is not available for you!',
         );
       }
-  
+
       const room = await this.roomModel.findOne({ roomNumber }).exec();
       if (!room) {
         return ApiResponse(null, 'Room not found');
       }
-  
+
+      const totalCount = await this.bookingModel
+        .countDocuments({ roomNumber: roomNumber, bookingDate: dateObj })
+        .exec();
+
       const bookings = await this.bookingModel
         .find({
           roomNumber: roomNumber,
           bookingDate: dateObj,
         })
+        .skip(offsetVal)
+        .limit(limitVal)
         .exec();
-  
+
       if (!bookings.length) {
         return ApiResponse(
           null,
           'No existing bookings for the room on the specified date.',
         );
       }
-  
+
       const availableSeatsOfTheRoom = await this.findAvailableSeatsOfARoom(
         roomNumber,
         dateObj,
       );
-  
+
       const dateTodayUTC = new Date().toISOString();
       const appliedCandidates = [];
-  
+
       await Promise.all(
         bookings.map(async (booking) => {
           const user = await this.userModel.findById(booking.userId).exec();
-          const bookingDateUTC = new Date(
-            booking.bookingDate,
-          ).toISOString();
-  
+          const bookingDateUTC = new Date(booking.bookingDate).toISOString();
+
           const bookingDetails = {
             userDetails: {
               username: user?.username,
@@ -573,7 +583,7 @@ export class RoomBookingService {
             bookingDate: booking.bookingDate,
             bookingId: booking._id,
           };
-  
+
           if (bookingDateUTC < dateTodayUTC) {
             appliedCandidates.push({
               ...bookingDetails,
@@ -587,7 +597,7 @@ export class RoomBookingService {
           }
         }),
       );
-  
+
       const response = {
         _id: room._id,
         roomName: room.roomName,
@@ -596,8 +606,16 @@ export class RoomBookingService {
         availableSeats: availableSeatsOfTheRoom.availableSeats,
         appliedCandidates,
       };
-  
-      return ApiResponse(response, 'Room details retrieved successfully');
+
+      return ApiResponse(
+        {
+          rooms: response,
+          totalBookings: totalCount,
+          limit: limitVal,
+          offset: offsetVal,
+        },
+        'Room details retrieved successfully',
+      );
     } catch (error) {
       console.error('Error: ', error);
       return ApiResponse(
@@ -607,7 +625,12 @@ export class RoomBookingService {
     }
   }
 
-  async getARoomDetails(usersType: number, roomNumber: number) {
+  async getARoomDetails(
+    usersType: number,
+    roomNumber: number,
+    limitVal: number,
+    offsetVal: number,
+  ) {
     try {
       if (usersType !== 1) {
         return ApiResponse(
@@ -615,31 +638,35 @@ export class RoomBookingService {
           'Fetching room details service is not available for you!',
         );
       }
-  
+
       const room = await this.roomModel.findOne({ roomNumber }).exec();
-  
+
       if (!room) {
         return ApiResponse(null, 'Room not found');
       }
-  
+
+      const totalCount = await this.bookingModel
+        .countDocuments({ roomNumber: roomNumber })
+        .exec();
+
       const bookings = await this.bookingModel
         .find({ roomNumber: roomNumber })
+        .skip(offsetVal)
+        .limit(limitVal)
         .exec();
-  
+
       if (!bookings || bookings.length === 0) {
         return ApiResponse(null, 'Bookings are not found!');
       }
-  
+
       const dateTodayUTC = new Date().toISOString();
       const appliedCandidates = [];
-  
+
       await Promise.all(
         bookings.map(async (booking) => {
           const user = await this.userModel.findById(booking.userId).exec();
-          const bookingDateUTC = new Date(
-            booking.bookingDate,
-          ).toISOString();
-  
+          const bookingDateUTC = new Date(booking.bookingDate).toISOString();
+
           const bookingDetails = {
             userDetails: {
               username: user?.username,
@@ -648,7 +675,7 @@ export class RoomBookingService {
             bookingDate: booking.bookingDate,
             bookingId: booking._id,
           };
-  
+
           if (bookingDateUTC < dateTodayUTC) {
             appliedCandidates.push({
               ...bookingDetails,
@@ -662,7 +689,7 @@ export class RoomBookingService {
           }
         }),
       );
-  
+
       const response = {
         _id: room._id,
         roomName: room.roomName,
@@ -670,8 +697,16 @@ export class RoomBookingService {
         seatCapacity: room.seatCapacity,
         appliedCandidates,
       };
-  
-      return ApiResponse(response, 'Room details retrieved successfully');
+
+      return ApiResponse(
+        {
+          rooms: response,
+          totalBookings: totalCount,
+          limit: limitVal,
+          offset: offsetVal,
+        },
+        'Room details retrieved successfully',
+      );
     } catch (error) {
       console.error('Error fetching room details:', error);
       return ApiResponse(
@@ -681,7 +716,13 @@ export class RoomBookingService {
     }
   }
 
-  async getAllRoomDetails(usersType: number) {
+  async getAllRoomDetails(
+    usersType: number,
+    limitVal: number,
+    offsetVal: number,
+    bookingLimitVal: number,
+    bookingOffsetVal: number
+  ) {
     try {
       if (usersType !== 1) {
         return ApiResponse(
@@ -689,30 +730,42 @@ export class RoomBookingService {
           'Fetching room details service is not available for you!',
         );
       }
-  
-      const roomEntity = await this.roomModel.find().exec();
-  
+
+      const totalRooms = await this.roomModel.countDocuments().exec();
+
+      const roomEntity = await this.roomModel
+        .find()
+        .skip(offsetVal)
+        .limit(limitVal)
+        .exec();
+
       if (!roomEntity || roomEntity.length === 0) {
         return ApiResponse(null, 'No room exists.');
       }
-  
+
       const dateTodayUTC = new Date().toISOString();
-  
+
       const roomDetails = await Promise.all(
         roomEntity.map(async (room) => {
+          const totalBookings = await this.bookingModel
+            .countDocuments({ _id: { $in: room.appliedCandidates } })
+            .exec();
+
           const bookings = await this.bookingModel
             .find({ _id: { $in: room.appliedCandidates } })
+            .skip(bookingOffsetVal)
+            .limit(bookingLimitVal)
             .exec();
-  
+
           const appliedCandidates = [];
-  
+
           await Promise.all(
             bookings.map(async (booking) => {
               const user = await this.userModel.findById(booking.userId).exec();
               const bookingDateUTC = new Date(
                 booking.bookingDate,
               ).toISOString();
-  
+
               const bookingDetails = {
                 userDetails: {
                   username: user?.username,
@@ -721,7 +774,7 @@ export class RoomBookingService {
                 bookingDate: booking.bookingDate,
                 bookingId: booking._id,
               };
-  
+
               if (bookingDateUTC < dateTodayUTC) {
                 appliedCandidates.push({
                   ...bookingDetails,
@@ -735,18 +788,29 @@ export class RoomBookingService {
               }
             }),
           );
-  
+
           return {
             _id: room._id,
             roomName: room.roomName,
             roomNumber: room.roomNumber,
             seatCapacity: room.seatCapacity,
             appliedCandidates,
+            totalBookings,
+            bookingLimit: bookingLimitVal,
+            bookingOffset: bookingOffsetVal,
           };
         }),
       );
-  
-      return ApiResponse(roomDetails, 'Room details retrieved successfully');
+
+      return ApiResponse(
+        {
+          rooms: roomDetails,
+          totalRooms: totalRooms,
+          limit: limitVal,
+          offset: offsetVal,
+        },
+        'Room details retrieved successfully',
+      );
     } catch (error) {
       console.error('Error fetching room details:', error);
       return ApiResponse(
