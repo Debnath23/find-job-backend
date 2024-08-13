@@ -111,8 +111,12 @@ export class RoomBookingController {
       const limitVal = limit ? parseInt(limit.toString(), 10) : 10;
       const offsetVal = offset ? parseInt(offset.toString(), 10) : 0;
 
-      const bookingLimitVal = bookingLimit ? parseInt(bookingLimit.toString(), 10) : 10;
-      const bookingOffsetVal = bookingOffset ? parseInt(bookingOffset.toString(), 10) : 0;
+      const bookingLimitVal = bookingLimit
+        ? parseInt(bookingLimit.toString(), 10)
+        : 10;
+      const bookingOffsetVal = bookingOffset
+        ? parseInt(bookingOffset.toString(), 10)
+        : 0;
 
       if (!request.user) {
         return ApiResponse(null, 'Unauthorized');
@@ -136,17 +140,30 @@ export class RoomBookingController {
             await this.roomBookingService.getAllUserBookingDetailsForAParticularDateAndRoom(
               roomNumber,
               dateObj,
+              limitVal,
+              offsetVal,
+              bookingLimitVal,
+              bookingOffsetVal,
             );
           return response;
         } else if (roomNumber) {
           const response =
-            await this.roomBookingService.geAlltUserBookingDetailsForAParticularRoom(
+            await this.roomBookingService.getAllUserBookingDetailsForAParticularRoom(
               roomNumber,
+              limitVal,
+              offsetVal,
+              bookingLimitVal,
+              bookingOffsetVal,
             );
           return response;
         } else {
           const response =
-            await this.roomBookingService.getAllUserBookingDetails();
+            await this.roomBookingService.getAllUserBookingDetails(
+              limitVal,
+              offsetVal,
+              bookingLimitVal,
+              bookingOffsetVal,
+            );
           return response;
         }
       } else {
@@ -164,13 +181,15 @@ export class RoomBookingController {
               userId,
               roomNumber,
               limitVal,
-              offsetVal
+              offsetVal,
             );
           return response;
         } else {
-          const response =
-            await this.roomBookingService.getUserBookingDetails(userId, limitVal,
-              offsetVal);
+          const response = await this.roomBookingService.getUserBookingDetails(
+            userId,
+            limitVal,
+            offsetVal,
+          );
           return response;
         }
       }
@@ -197,8 +216,12 @@ export class RoomBookingController {
       const limitVal = limit ? parseInt(limit.toString(), 10) : 10;
       const offsetVal = offset ? parseInt(offset.toString(), 10) : 0;
 
-      const bookingLimitVal = bookingLimit ? parseInt(bookingLimit.toString(), 10) : 10;
-      const bookingOffsetVal = bookingOffset ? parseInt(bookingOffset.toString(), 10) : 0;
+      const bookingLimitVal = bookingLimit
+        ? parseInt(bookingLimit.toString(), 10)
+        : 10;
+      const bookingOffsetVal = bookingOffset
+        ? parseInt(bookingOffset.toString(), 10)
+        : 0;
 
       if (!request.user) {
         return ApiResponse(null, 'Unauthorized: token may be expired!');

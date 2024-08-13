@@ -229,16 +229,14 @@ export class RoomBookingService {
         .limit(limitVal)
         .skip(offsetVal)
         .exec();
+
       if (!bookingEntities || bookingEntities.length === 0) {
         return ApiResponse(null, 'No bookings found for this user!');
       }
 
       const dateTodayUTC = new Date().toISOString();
 
-      const pastBookings = [];
-      const upcomingBookings = [];
-
-      bookingEntities.forEach((booking) => {
+      const bookingsWithStatus = bookingEntities.map((booking) => {
         const bookingDateUTC = new Date(booking.bookingDate).toISOString();
 
         const bookingDetails = {
@@ -246,22 +244,23 @@ export class RoomBookingService {
           bookingId: booking._id,
         };
 
-        if (bookingDateUTC < dateTodayUTC) {
-          pastBookings.push(bookingDetails);
-        } else {
-          upcomingBookings.push(bookingDetails);
-        }
+        return {
+          ...bookingDetails,
+          bookingStatus: bookingDateUTC < dateTodayUTC ? 'past' : 'upcoming',
+        };
       });
 
-      return {
-        roomName: bookingEntities[0].roomName,
-        roomNumber: bookingEntities[0].roomNumber,
-        pastBookings,
-        upcomingBookings,
-        totalBookings: totalCount,
-        limit: limitVal,
-        offset: offsetVal,
-      };
+      return ApiResponse(
+        {
+          roomName: bookingEntities[0].roomName,
+          roomNumber: bookingEntities[0].roomNumber,
+          bookings: bookingsWithStatus,
+          totalBookings: totalCount,
+          limit: limitVal,
+          offset: offsetVal,
+        },
+        'User bookings retrieved successfully',
+      );
     } catch (error) {
       console.error('Error fetching booking details:', error);
       throw new HttpException(
@@ -291,16 +290,14 @@ export class RoomBookingService {
         .limit(limitVal)
         .skip(offsetVal)
         .exec();
+
       if (!bookingEntities || bookingEntities.length === 0) {
         return ApiResponse(null, 'No bookings found for this user!');
       }
 
       const dateTodayUTC = new Date().toISOString();
 
-      const pastBookings = [];
-      const upcomingBookings = [];
-
-      bookingEntities.forEach((booking) => {
+      const bookingsWithStatus = bookingEntities.map((booking) => {
         const bookingDateUTC = new Date(booking.bookingDate).toISOString();
 
         const bookingDetails = {
@@ -310,20 +307,21 @@ export class RoomBookingService {
           bookingId: booking._id,
         };
 
-        if (bookingDateUTC < dateTodayUTC) {
-          pastBookings.push(bookingDetails);
-        } else {
-          upcomingBookings.push(bookingDetails);
-        }
+        return {
+          ...bookingDetails,
+          bookingStatus: bookingDateUTC < dateTodayUTC ? 'past' : 'upcoming',
+        };
       });
 
-      return {
-        pastBookings,
-        upcomingBookings,
-        totalBookings: totalCount,
-        limit: limitVal,
-        offset: offsetVal,
-      };
+      return ApiResponse(
+        {
+          bookings: bookingsWithStatus,
+          totalBookings: totalCount,
+          limit: limitVal,
+          offset: offsetVal,
+        },
+        'User bookings retrieved successfully',
+      );
     } catch (error) {
       console.error('Error fetching booking details:', error);
       throw new HttpException(
@@ -336,9 +334,19 @@ export class RoomBookingService {
   async getAllUserBookingDetailsForAParticularDateAndRoom(
     roomNumber: number,
     date: Date,
+    limitVal: number,
+    offsetVal: number,
+    bookingLimitVal: number,
+    bookingOffsetVal: number,
   ) {
     try {
-      const userEntities = await this.userModel.find().exec();
+      const totalCount = await this.userModel.countDocuments().exec();
+
+      const userEntities = await this.userModel
+        .find()
+        .limit(limitVal)
+        .skip(offsetVal)
+        .exec();
 
       if (!userEntities || userEntities.length === 0) {
         return ApiResponse(null, 'No bookings found!');
@@ -352,15 +360,21 @@ export class RoomBookingService {
 
       await Promise.all(
         userEntities.map(async (user) => {
-          const pastBookings = [];
-          const upcomingBookings = [];
-
-          const bookings = await this.bookingModel
-            .find({
-              userId: user._id,
+          const totalBookings = await this.bookingModel
+            .countDocuments({
               roomNumber: roomNumber,
               bookingDate: dateInUTC,
             })
+            .exec();
+
+          const bookings = await this.bookingModel
+            .find({
+              // userId: user._id,
+              roomNumber: roomNumber,
+              bookingDate: dateInUTC,
+            })
+            .limit(bookingLimitVal)
+            .skip(bookingOffsetVal)
             .exec();
 
           if (bookings.length > 0) {
@@ -368,7 +382,7 @@ export class RoomBookingService {
               roomName = bookings[0].roomName;
             }
 
-            bookings.forEach((booking) => {
+            const bookingWithStatus = bookings.map((booking) => {
               const bookingDateUTC = new Date(
                 booking.bookingDate,
               ).toISOString();
@@ -377,18 +391,20 @@ export class RoomBookingService {
                 bookingId: booking._id,
               };
 
-              if (bookingDateUTC < dateTodayUTC) {
-                pastBookings.push(bookingDetails);
-              } else {
-                upcomingBookings.push(bookingDetails);
-              }
+              return {
+                ...bookingDetails,
+                bookingStatus:
+                  bookingDateUTC < dateTodayUTC ? 'past' : 'upcoming',
+              };
             });
 
             appliedCandidates.push({
               username: user.username,
               email: user.email,
-              pastBookings,
-              upcomingBookings,
+              bookings: bookingWithStatus,
+              totalBookings: totalBookings,
+              bookingLimit: bookingLimitVal,
+              bookingOffset: bookingOffsetVal,
             });
           }
         }),
@@ -399,6 +415,9 @@ export class RoomBookingService {
         roomNumber: roomNumber.toString(),
         date: dateInUTC,
         appliedCandidates,
+        totalUsers: totalCount,
+        limit: limitVal,
+        offset: offsetVal,
       };
 
       return ApiResponse(response, 'User bookings retrieved successfully');
@@ -411,9 +430,21 @@ export class RoomBookingService {
     }
   }
 
-  async geAlltUserBookingDetailsForAParticularRoom(roomNumber: number) {
+  async getAllUserBookingDetailsForAParticularRoom(
+    roomNumber: number,
+    limitVal: number,
+    offsetVal: number,
+    bookingLimitVal: number,
+    bookingOffsetVal: number,
+  ) {
     try {
-      const userEntities = await this.userModel.find().exec();
+      const totalCount = await this.userModel.countDocuments().exec();
+
+      const userEntities = await this.userModel
+        .find()
+        .limit(limitVal)
+        .skip(offsetVal)
+        .exec();
 
       if (!userEntities || userEntities.length === 0) {
         return ApiResponse(null, 'No bookings found!');
@@ -426,14 +457,18 @@ export class RoomBookingService {
 
       await Promise.all(
         userEntities.map(async (user) => {
-          const pastBookings = [];
-          const upcomingBookings = [];
+          const totalBookings = await this.bookingModel
+            .countDocuments({
+              roomNumber: roomNumber,
+            })
+            .exec();
 
           const bookings = await this.bookingModel
             .find({
-              userId: user._id,
               roomNumber: roomNumber,
             })
+            .limit(bookingLimitVal)
+            .skip(bookingOffsetVal)
             .exec();
 
           if (bookings.length > 0) {
@@ -441,7 +476,7 @@ export class RoomBookingService {
               roomName = bookings[0].roomName;
             }
 
-            bookings.forEach((booking) => {
+            const bookingWithStatus = bookings.map((booking) => {
               const bookingDateUTC = new Date(
                 booking.bookingDate,
               ).toISOString();
@@ -450,18 +485,20 @@ export class RoomBookingService {
                 bookingId: booking._id,
               };
 
-              if (bookingDateUTC < dateTodayUTC) {
-                pastBookings.push(bookingDetails);
-              } else {
-                upcomingBookings.push(bookingDetails);
-              }
+              return {
+                ...bookingDetails,
+                bookingStatus:
+                  bookingDateUTC < dateTodayUTC ? 'past' : 'upcoming',
+              };
             });
 
             appliedCandidates.push({
               username: user.username,
               email: user.email,
-              pastBookings,
-              upcomingBookings,
+              bookings: bookingWithStatus,
+              totalBookings: totalBookings,
+              bookingLimit: bookingLimitVal,
+              bookingOffset: bookingOffsetVal,
             });
           }
         }),
@@ -471,6 +508,9 @@ export class RoomBookingService {
         roomName: roomName || 'Unknown Room',
         roomNumber: roomNumber.toString(),
         appliedCandidates,
+        totalUsers: totalCount,
+        limit: limitVal,
+        offset: offsetVal,
       };
 
       return ApiResponse(response, 'User bookings retrieved successfully');
@@ -483,9 +523,20 @@ export class RoomBookingService {
     }
   }
 
-  async getAllUserBookingDetails() {
+  async getAllUserBookingDetails(
+    limitVal: number,
+    offsetVal: number,
+    bookingLimitVal: number,
+    bookingOffsetVal: number,
+  ) {
     try {
-      const userEntities = await this.userModel.find().exec();
+      const totalCount = await this.userModel.countDocuments().exec();
+
+      const userEntities = await this.userModel
+        .find()
+        .limit(limitVal)
+        .skip(offsetVal)
+        .exec();
 
       if (!userEntities || userEntities.length === 0) {
         return ApiResponse(null, 'No bookings found!');
@@ -495,46 +546,59 @@ export class RoomBookingService {
 
       const allUserBookings = await Promise.all(
         userEntities.map(async (user) => {
-          const pastBookings = [];
-          const upcomingBookings = [];
+          const totalBookings = user.bookings.length;
 
-          await Promise.all(
-            user.bookings.map(async (bookingId) => {
+          const paginatedBookings = user.bookings.slice(
+            bookingOffsetVal,
+            bookingOffsetVal + bookingLimitVal,
+          );
+
+          const bookingWithStatus = await Promise.all(
+            paginatedBookings.map(async (bookingId) => {
               const booking = await this.bookingModel
                 .findById(bookingId)
                 .exec();
-              const bookingDateUTC = new Date(
-                booking.bookingDate,
-              ).toISOString();
 
-              const bookingDetails = {
-                roomName: booking.roomName,
-                roomNumber: booking.roomNumber,
-                bookingDate: bookingDateUTC,
-                bookingId: booking._id,
-              };
+              if (booking) {
+                const bookingDateUTC = new Date(
+                  booking.bookingDate,
+                ).toISOString();
 
-              if (bookingDateUTC < dateTodayUTC) {
-                pastBookings.push(bookingDetails);
-              } else {
-                upcomingBookings.push(bookingDetails);
+                const bookingDetails = {
+                  roomName: booking.roomName,
+                  roomNumber: booking.roomNumber,
+                  bookingDate: bookingDateUTC,
+                  bookingId: booking._id,
+                };
+
+                return {
+                  ...bookingDetails,
+                  bookingStatus:
+                    bookingDateUTC < dateTodayUTC ? 'past' : 'upcoming',
+                };
               }
+              return null;
             }),
           );
 
           return {
             username: user.username,
             email: user.email,
-            bookings: {
-              pastBookings,
-              upcomingBookings,
-            },
+            bookings: bookingWithStatus.filter(Boolean),
+            totalBookings,
+            bookingLimit: bookingLimitVal,
+            bookingOffset: bookingOffsetVal,
           };
         }),
       );
 
       return ApiResponse(
-        allUserBookings,
+        {
+          allUserBookings,
+          totalUsers: totalCount,
+          limit: limitVal,
+          offset: offsetVal,
+        },
         'User bookings retrieved successfully',
       );
     } catch (error) {
