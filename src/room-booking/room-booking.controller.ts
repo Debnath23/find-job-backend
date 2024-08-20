@@ -41,7 +41,7 @@ export class RoomBookingController {
     return response;
   }
 
-  @Post('book')
+  @Post('book-room')
   async bookRoom(
     @Req() request: ExpressRequest,
     @Body() roomBookingDto: RoomBookingDto,
@@ -230,7 +230,7 @@ export class RoomBookingController {
   //   }
   // }
 
-  @Get('getBookingDetails')
+  @Get('get-booking-details')
   async getBookingDetails(
     @Req() request: ExpressRequest,
     @Query('username') username?: string,
@@ -238,18 +238,18 @@ export class RoomBookingController {
     @Query('date') date?: string,
     @Query('limit') limit?: number,
     @Query('offset') offset?: number,
-    @Query('bookingLimit') bookingLimit?: number,
-    @Query('bookingOffset') bookingOffset?: number,
+    // @Query('bookingLimit') bookingLimit?: number,
+    // @Query('bookingOffset') bookingOffset?: number,
   ) {
     try {
       const limitVal = limit ? parseInt(limit.toString(), 10) : 10;
       const offsetVal = offset ? parseInt(offset.toString(), 10) : 0;
-      const bookingLimitVal = bookingLimit
-        ? parseInt(bookingLimit.toString(), 10)
-        : 10;
-      const bookingOffsetVal = bookingOffset
-        ? parseInt(bookingOffset.toString(), 10)
-        : 0;
+      // const bookingLimitVal = bookingLimit
+      //   ? parseInt(bookingLimit.toString(), 10)
+      //   : 10;
+      // const bookingOffsetVal = bookingOffset
+      //   ? parseInt(bookingOffset.toString(), 10)
+      //   : 0;
 
       if (!request.user) {
         return ApiResponse(null, 'Unauthorized');
@@ -360,7 +360,7 @@ export class RoomBookingController {
     }
   }
 
-  @Get('getRoomDetails')
+  @Get('get-room-details')
   async getRoomDetails(
     @Request() request: ExpressRequest,
     @Query('roomNumber') roomNumber?: number,
@@ -431,7 +431,7 @@ export class RoomBookingController {
     }
   }
 
-  @Get('booking-availability/:roomNumber/:date')
+  @Get('booking-availability/:room-number/:date')
   async bookingAvailability(
     @Param('roomNumber') roomNumber: number,
     @Param('date') date: string,
@@ -466,7 +466,7 @@ export class RoomBookingController {
     }
   }
 
-  @Get('checkExistingRooms')
+  @Get('check-existing-rooms')
   async checkExistingRooms(@Req() request: ExpressRequest) {
     try {
       if (!request.user) {
