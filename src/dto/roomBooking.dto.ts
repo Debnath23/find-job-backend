@@ -1,9 +1,9 @@
 import { ApiProperty } from '@nestjs/swagger';
 
 export class RoomBookingDto {
-  @ApiProperty({required: true})
+  @ApiProperty()
   readonly roomNumber: number;
 
-  @ApiProperty({required: true})
+  @ApiProperty()
   readonly bookingDate: string;
 }

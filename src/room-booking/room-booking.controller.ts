@@ -97,9 +97,143 @@ export class RoomBookingController {
     }
   }
 
+  // @Get('getBookingDetails')
+  // async getBookingDetails(
+  //   @Req() request: ExpressRequest,
+  //   @Query('username') username?: string,
+  //   @Query('roomNumber') roomNumber?: number,
+  //   @Query('date') date?: string,
+  //   @Query('limit') limit?: number,
+  //   @Query('offset') offset?: number,
+  //   @Query('bookingLimit') bookingLimit?: number,
+  //   @Query('bookingOffset') bookingOffset?: number,
+  // ) {
+  //   try {
+  //     const limitVal = limit ? parseInt(limit.toString(), 10) : 10;
+  //     const offsetVal = offset ? parseInt(offset.toString(), 10) : 0;
+
+  //     const bookingLimitVal = bookingLimit
+  //       ? parseInt(bookingLimit.toString(), 10)
+  //       : 10;
+  //     const bookingOffsetVal = bookingOffset
+  //       ? parseInt(bookingOffset.toString(), 10)
+  //       : 0;
+
+  //     if (!request.user) {
+  //       return ApiResponse(null, 'Unauthorized');
+  //     }
+
+  //     const userId = request.user._id;
+
+  //     let dateObj: Date | null = null;
+
+  //     if (date) {
+  //       dateObj = parse(date, 'yyyy-MM-dd', new Date());
+
+  //       if (!isValid(dateObj)) {
+  //         return ApiResponse(null, 'Invalid booking date format.');
+  //       }
+  //     }
+
+  //     if (request.user.usersType === 1) {
+  //       if (roomNumber && dateObj) {
+  //         const response =
+  //           await this.roomBookingService.getAllUserBookingDetailsForAParticularDateAndRoom(
+  //             roomNumber,
+  //             dateObj,
+  //             limitVal,
+  //             offsetVal,
+  //             bookingLimitVal,
+  //             bookingOffsetVal,
+  //           );
+  //         return response;
+  //       } else if (roomNumber) {
+  //         const response =
+  //           await this.roomBookingService.getAllUserBookingDetailsForAParticularRoom(
+  //             roomNumber,
+  //             limitVal,
+  //             offsetVal,
+  //             bookingLimitVal,
+  //             bookingOffsetVal,
+  //           );
+  //         return response;
+  //       }
+  //       else if (roomNumber && dateObj && username) {
+  //         const response =
+  //           await this.roomBookingService.getAUserBookingDetailsForAParticularDateAndRoom(
+  //             username,
+  //             roomNumber,
+  //             dateObj,
+  //           );
+  //         return response;
+  //       } else if (roomNumber && username) {
+  //         const response =
+  //           await this.roomBookingService.getAUserBookingDetailsForAParticularRoom(
+  //             username,
+  //             roomNumber,
+  //             limitVal,
+  //             offsetVal,
+  //           );
+  //         return response;
+  //       } else if(username) {
+  //         const response =
+  //           await this.roomBookingService.getAUserBookingDetails(
+  //             username,
+  //             limitVal,
+  //             offsetVal,
+  //           );
+  //         return response;
+  //       }
+  //       else {
+  //         const response =
+  //           await this.roomBookingService.getAllUserBookingDetails(
+  //             limitVal,
+  //             offsetVal,
+  //             bookingLimitVal,
+  //             bookingOffsetVal,
+  //           );
+  //         return response;
+  //       }
+  //     } else {
+  //       if (roomNumber && dateObj) {
+  //         const response =
+  //           await this.roomBookingService.getUserBookingDetailsForAParticularDateAndRoom(
+  //             userId,
+  //             roomNumber,
+  //             dateObj,
+  //           );
+  //         return response;
+  //       } else if (roomNumber) {
+  //         const response =
+  //           await this.roomBookingService.getUserBookingDetailsForAParticularRoom(
+  //             userId,
+  //             roomNumber,
+  //             limitVal,
+  //             offsetVal,
+  //           );
+  //         return response;
+  //       } else {
+  //         const response = await this.roomBookingService.getUserBookingDetails(
+  //           userId,
+  //           limitVal,
+  //           offsetVal,
+  //         );
+  //         return response;
+  //       }
+  //     }
+  //   } catch (error) {
+  //     console.log('Error: ', error);
+  //     throw new HttpException(
+  //       'Something went wrong while fetching user booking details',
+  //       HttpStatus.PROCESSING,
+  //     );
+  //   }
+  // }
+
   @Get('getBookingDetails')
   async getBookingDetails(
     @Req() request: ExpressRequest,
+    @Query('username') username?: string,
     @Query('roomNumber') roomNumber?: number,
     @Query('date') date?: string,
     @Query('limit') limit?: number,
@@ -110,7 +244,6 @@ export class RoomBookingController {
     try {
       const limitVal = limit ? parseInt(limit.toString(), 10) : 10;
       const offsetVal = offset ? parseInt(offset.toString(), 10) : 0;
-
       const bookingLimitVal = bookingLimit
         ? parseInt(bookingLimit.toString(), 10)
         : 10;
@@ -123,81 +256,106 @@ export class RoomBookingController {
       }
 
       const userId = request.user._id;
+      const userType = request.user.usersType;
+      const isAdmin = userType === 1;
 
       let dateObj: Date | null = null;
-
       if (date) {
         dateObj = parse(date, 'yyyy-MM-dd', new Date());
-
         if (!isValid(dateObj)) {
           return ApiResponse(null, 'Invalid booking date format.');
         }
       }
 
-      if (request.user.usersType === 1) {
-        if (roomNumber && dateObj) {
-          const response =
-            await this.roomBookingService.getAllUserBookingDetailsForAParticularDateAndRoom(
+      if (roomNumber && dateObj && username) {
+        return isAdmin
+          ? await this.roomBookingService.getAUserBookingDetailsForAParticularDateAndRoom(
+              username,
               roomNumber,
               dateObj,
-              limitVal,
-              offsetVal,
-              bookingLimitVal,
-              bookingOffsetVal,
-            );
-          return response;
-        } else if (roomNumber) {
-          const response =
-            await this.roomBookingService.getAllUserBookingDetailsForAParticularRoom(
-              roomNumber,
-              limitVal,
-              offsetVal,
-              bookingLimitVal,
-              bookingOffsetVal,
-            );
-          return response;
-        } else {
-          const response =
-            await this.roomBookingService.getAllUserBookingDetails(
-              limitVal,
-              offsetVal,
-              bookingLimitVal,
-              bookingOffsetVal,
-            );
-          return response;
-        }
-      } else {
-        if (roomNumber && dateObj) {
-          const response =
-            await this.roomBookingService.getUserBookingDetailsForAParticularDateAndRoom(
+            )
+          : await this.roomBookingService.getUserBookingDetailsForAParticularDateAndRoom(
               userId,
               roomNumber,
               dateObj,
             );
-          return response;
-        } else if (roomNumber) {
-          const response =
-            await this.roomBookingService.getUserBookingDetailsForAParticularRoom(
+      }
+
+      if (roomNumber && dateObj) {
+        return isAdmin
+          ? await this.roomBookingService.getAllUserBookingDetailsForAParticularDateAndRoom(
+              roomNumber,
+              dateObj,
+              limitVal,
+              offsetVal,
+              // bookingLimitVal,
+              // bookingOffsetVal,
+            )
+          : await this.roomBookingService.getUserBookingDetailsForAParticularDateAndRoom(
+              userId,
+              roomNumber,
+              dateObj,
+            );
+      }
+
+      if (roomNumber && username) {
+        return isAdmin
+          ? await this.roomBookingService.getAUserBookingDetailsForAParticularRoom(
+              username,
+              roomNumber,
+              limitVal,
+              offsetVal,
+            )
+          : await this.roomBookingService.getUserBookingDetailsForAParticularRoom(
               userId,
               roomNumber,
               limitVal,
               offsetVal,
             );
-          return response;
-        } else {
-          const response = await this.roomBookingService.getUserBookingDetails(
+      }
+
+      if (roomNumber) {
+        return isAdmin
+          ? await this.roomBookingService.getAllUserBookingDetailsForAParticularRoom(
+              roomNumber,
+              limitVal,
+              offsetVal,
+              // bookingLimitVal,
+              // bookingOffsetVal,
+            )
+          : await this.roomBookingService.getUserBookingDetailsForAParticularRoom(
+              userId,
+              roomNumber,
+              limitVal,
+              offsetVal,
+            );
+      }
+
+      if (username && isAdmin) {
+        return await this.roomBookingService.getAUserBookingDetails(
+          username,
+          limitVal,
+          offsetVal,
+        );
+      }
+
+      return isAdmin
+        ? await this.roomBookingService.getAllUserBookingDetails(
+            limitVal,
+            offsetVal,
+            // bookingLimitVal,
+            // bookingOffsetVal,
+          )
+        : await this.roomBookingService.getUserBookingDetails(
             userId,
             limitVal,
             offsetVal,
           );
-          return response;
-        }
-      }
     } catch (error) {
       console.log('Error: ', error);
       throw new HttpException(
         'Something went wrong while fetching user booking details',
-        HttpStatus.PROCESSING,
+        HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
   }
