@@ -431,10 +431,10 @@ export class RoomBookingController {
     }
   }
 
-  @Get('booking-availability/:room-number/:date')
+  @Get('booking-availability')
   async bookingAvailability(
-    @Param('roomNumber') roomNumber: number,
-    @Param('date') date: string,
+    @Query('roomNumber') roomNumber: number,
+    @Query('date') date: string,
     @Req() request: ExpressRequest,
   ) {
     if (!request.user) {

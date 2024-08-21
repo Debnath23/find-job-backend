@@ -331,17 +331,197 @@ export class RoomBookingService {
     }
   }
 
+  // async getAllUserBookingDetailsForAParticularDateAndRoom(
+  //   roomNumber: number,
+  //   date: Date,
+  //   limitVal: number,
+  //   offsetVal: number,
+  //   // bookingLimitVal: number,
+  //   // bookingOffsetVal: number,
+  // ) {
+  //   try {
+  //     const totalCount = await this.userModel.countDocuments().exec();
+  //     const dateInUTC = new Date(date).toISOString();
+
+  //     const userEntitiesForCount = await this.userModel.find().exec();
+
+  //     const AllBookings = await this.bookingModel
+  //       .countDocuments({
+  //         roomNumber: roomNumber,
+  //         bookingDate: dateInUTC,
+  //       })
+  //       .exec();
+
+  //     console.log("AllBookings: ", AllBookings);
+
+  //     const userEntities = await this.userModel
+  //       .find()
+  //       .limit(limitVal)
+  //       .skip(offsetVal)
+  //       .exec();
+
+  //     if (!userEntities || userEntities.length === 0) {
+  //       return ApiResponse(null, 'No bookings found!');
+  //     }
+
+  //     // const dateTodayUTC = new Date().toISOString();
+
+  //     const allUserBookings = [];
+  //     let roomName: string | null = null;
+  //     let totalUsersWithBookings = 0;
+
+  //     await Promise.all(
+  //       userEntities.map(async (user) => {
+  //         // totalBookings = totalBookings + AllBookings;
+
+  //         const bookings = await this.bookingModel
+  //           .find({
+  //             // userId: user._id,
+  //             roomNumber: roomNumber,
+  //             bookingDate: dateInUTC,
+  //           })
+  //           // .limit(bookingLimitVal)
+  //           // .skip(bookingOffsetVal)
+  //           .exec();
+
+  //         if (bookings.length > 0) {
+  //           totalUsersWithBookings += 1;
+
+  //           if (roomName === null) {
+  //             roomName = bookings[0].roomName;
+  //           }
+
+  //           // const bookingWithStatus = bookings.map((booking) => {
+  //           //   const bookingDateUTC = new Date(
+  //           //     booking.bookingDate,
+  //           //   ).toISOString();
+
+  //           //   const bookingDetails = {
+  //           //     bookingId: booking._id,
+  //           //   };
+
+  //           //   return {
+  //           //     ...bookingDetails,
+  //           //     bookingStatus:
+  //           //       bookingDateUTC < dateTodayUTC ? 'past' : 'upcoming',
+  //           //   };
+  //           // });
+
+  //           allUserBookings.push({
+  //             username: user.username,
+  //             email: user.email,
+  //             // bookings: bookingWithStatus,
+  //             // totalBookings: totalBookings,
+  //             // bookingLimit: bookingLimitVal,
+  //             // bookingOffset: bookingOffsetVal,
+  //           });
+  //         }
+  //       }),
+  //     );
+
+  //     const response = {
+  //       roomName: roomName || 'Unknown Room',
+  //       roomNumber: roomNumber.toString(),
+  //       date: dateInUTC,
+  //       allUserBookings,
+  //       totalUsers: AllBookings,
+  //       limit: limitVal,
+  //       offset: offsetVal,
+  //     };
+
+  //     return ApiResponse(response, 'User bookings retrieved successfully');
+  //   } catch (error) {
+  //     console.error('Error fetching booking details:', error);
+  //     return ApiResponse(
+  //       null,
+  //       'Something went wrong while fetching user booking details for a particular room and particular date.',
+  //     );
+  //   }
+  // }
+
+  // async getAllUserBookingDetailsForAParticularDateAndRoom(
+  //   roomNumber: number,
+  //   date: Date,
+  //   limitVal: number,
+  //   offsetVal: number,
+  // ) {
+  //   try {
+  //     const dateInUTC = new Date(date).toISOString();
+
+  //     const AllBookings = await this.bookingModel
+  //       .countDocuments({
+  //         roomNumber: roomNumber,
+  //         bookingDate: dateInUTC,
+  //       })
+  //       .exec();
+
+  //     console.log("AllBookings: ", AllBookings);
+
+  //     const userEntities = await this.userModel
+  //       .find()
+  //       .limit(limitVal)
+  //       .skip(offsetVal)
+  //       .exec();
+
+  //     if (!userEntities || userEntities.length === 0) {
+  //       return ApiResponse(null, 'No bookings found!');
+  //     }
+
+  //     const allUserBookings = [];
+  //     let roomName: string | null = null;
+
+  //     await Promise.all(
+  //       userEntities.map(async (user) => {
+  //         const bookings = await this.bookingModel
+  //           .find({
+  //             roomNumber: roomNumber,
+  //             bookingDate: dateInUTC,
+  //           })
+  //           .exec();
+
+  //         if (bookings.length > 0) {
+  //           if (roomName === null) {
+  //             roomName = bookings[0].roomName;
+  //           }
+
+  //           allUserBookings.push({
+  //             username: user.username,
+  //             email: user.email,
+  //           });
+  //         }
+  //       }),
+  //     );
+
+  //     const response = {
+  //       roomName: roomName || 'Unknown Room',
+  //       roomNumber: roomNumber.toString(),
+  //       date: dateInUTC,
+  //       allUserBookings,
+  //       totalUsers: AllBookings,
+  //       limit: limitVal,
+  //       offset: offsetVal,
+  //     };
+
+  //     return ApiResponse(response, 'User bookings retrieved successfully');
+  //   } catch (error) {
+  //     console.error('Error fetching booking details:', error);
+  //     return ApiResponse(
+  //       null,
+  //       'Something went wrong while fetching user booking details for a particular room and particular date.',
+  //     );
+  //   }
+  // }
+
   async getAllUserBookingDetailsForAParticularDateAndRoom(
     roomNumber: number,
     date: Date,
     limitVal: number,
     offsetVal: number,
-    // bookingLimitVal: number,
-    // bookingOffsetVal: number,
   ) {
     try {
-      const totalCount = await this.userModel.countDocuments().exec();
+      const dateInUTC = new Date(date).toISOString();
 
+      // Retrieve user entities based on the provided limit and offset
       const userEntities = await this.userModel
         .find()
         .limit(limitVal)
@@ -352,59 +532,34 @@ export class RoomBookingService {
         return ApiResponse(null, 'No bookings found!');
       }
 
-      const dateInUTC = new Date(date).toISOString();
-      // const dateTodayUTC = new Date().toISOString();
-
-      const appliedCandidates = [];
+      const allUserBookings = [];
       let roomName: string | null = null;
+      let totalUsersWithBookings = 0;
 
       await Promise.all(
         userEntities.map(async (user) => {
-          // const totalBookings = await this.bookingModel
-          //   .countDocuments({
-          //     roomNumber: roomNumber,
-          //     bookingDate: dateInUTC,
-          //   })
-          //   .exec();
-
+          // Find bookings for the specific room, date, and user
           const bookings = await this.bookingModel
             .find({
-              // userId: user._id,
               roomNumber: roomNumber,
               bookingDate: dateInUTC,
+              userId: user._id,
             })
-            // .limit(bookingLimitVal)
-            // .skip(bookingOffsetVal)
             .exec();
 
           if (bookings.length > 0) {
+            // Increment the count of users with bookings
+            totalUsersWithBookings += 1;
+
+            // Set the room name if it hasn't been set already
             if (roomName === null) {
               roomName = bookings[0].roomName;
             }
 
-            // const bookingWithStatus = bookings.map((booking) => {
-            //   const bookingDateUTC = new Date(
-            //     booking.bookingDate,
-            //   ).toISOString();
-
-            //   const bookingDetails = {
-            //     bookingId: booking._id,
-            //   };
-
-            //   return {
-            //     ...bookingDetails,
-            //     bookingStatus:
-            //       bookingDateUTC < dateTodayUTC ? 'past' : 'upcoming',
-            //   };
-            // });
-
-            appliedCandidates.push({
+            allUserBookings.push({
               username: user.username,
               email: user.email,
-              // bookings: bookingWithStatus,
-              // totalBookings: totalBookings,
-              // bookingLimit: bookingLimitVal,
-              // bookingOffset: bookingOffsetVal,
+              // Optional: You can add more details here if needed
             });
           }
         }),
@@ -414,8 +569,8 @@ export class RoomBookingService {
         roomName: roomName || 'Unknown Room',
         roomNumber: roomNumber.toString(),
         date: dateInUTC,
-        appliedCandidates,
-        totalUsers: totalCount,
+        allUserBookings,
+        totalUsers: totalUsersWithBookings,
         limit: limitVal,
         offset: offsetVal,
       };
@@ -425,90 +580,143 @@ export class RoomBookingService {
       console.error('Error fetching booking details:', error);
       return ApiResponse(
         null,
-        'Something went wrong while fetching user booking details for a particular room and particular date.',
+        'Something went wrong while fetching user booking details for a particular room and date.',
       );
     }
   }
+
+  // async getAllUserBookingDetailsForAParticularRoom(
+  //   roomNumber: number,
+  //   limitVal: number,
+  //   offsetVal: number,
+  //   // bookingLimitVal: number,
+  //   // bookingOffsetVal: number,
+  // ) {
+  //   try {
+  //     const totalCount = await this.userModel.countDocuments().exec();
+
+  //     const userEntities = await this.userModel
+  //       .find()
+  //       .limit(limitVal)
+  //       .skip(offsetVal)
+  //       .exec();
+
+  //     if (!userEntities || userEntities.length === 0) {
+  //       return ApiResponse(null, 'No bookings found!');
+  //     }
+
+  //     // const dateTodayUTC = new Date().toISOString();
+
+  //     const allUserBookings = [];
+  //     let roomName: string | null = null;
+  //     let totalBookings = 0;
+
+  //     await Promise.all(
+  //       userEntities.map(async (user) => {
+  //         totalBookings += await this.bookingModel
+  //           .countDocuments({
+  //             roomNumber: roomNumber,
+
+  //           })
+  //           .exec();
+
+  //         const bookings = await this.bookingModel
+  //           .find({
+  //             roomNumber: roomNumber,
+  //             userId: user._id
+  //           })
+  //           // .limit(bookingLimitVal)
+  //           // .skip(bookingOffsetVal)
+  //           .exec();
+
+  //         if (bookings.length > 0) {
+  //           totalBookings += 1;
+
+  //           if (roomName === null) {
+  //             roomName = bookings[0].roomName;
+  //           }
+
+  //           // const bookingWithStatus = bookings.map((booking) => {
+  //           //   const bookingDateUTC = new Date(
+  //           //     booking.bookingDate,
+  //           //   ).toISOString();
+
+  //           //   const bookingDetails = {
+  //           //     bookingId: booking._id,
+  //           //   };
+
+  //           //   return {
+  //           //     ...bookingDetails,
+  //           //     bookingStatus:
+  //           //       bookingDateUTC < dateTodayUTC ? 'past' : 'upcoming',
+  //           //   };
+  //           // });
+
+  //           allUserBookings.push({
+  //             username: user.username,
+  //             email: user.email,
+  //             // bookings: bookingWithStatus,
+  //             // totalBookings: totalBookings,
+  //             // bookingLimit: bookingLimitVal,
+  //             // bookingOffset: bookingOffsetVal,
+  //           });
+  //         }
+  //       }),
+  //     );
+
+  //     const response = {
+  //       roomName: roomName || 'Unknown Room',
+  //       roomNumber: roomNumber.toString(),
+  //       allUserBookings,
+  //       totalUsers: totalBookings,
+  //       limit: limitVal,
+  //       offset: offsetVal,
+  //     };
+
+  //     return ApiResponse(response, 'User bookings retrieved successfully');
+  //   } catch (error) {
+  //     console.error('Error fetching booking details:', error);
+  //     return ApiResponse(
+  //       null,
+  //       'Something went wrong while fetching user booking details for a particular room.',
+  //     );
+  //   }
+  // }
 
   async getAllUserBookingDetailsForAParticularRoom(
     roomNumber: number,
     limitVal: number,
     offsetVal: number,
-    // bookingLimitVal: number,
-    // bookingOffsetVal: number,
   ) {
     try {
-      const totalCount = await this.userModel.countDocuments().exec();
-
-      const userEntities = await this.userModel
-        .find()
-        .limit(limitVal)
+      const bookings = await this.bookingModel
+        .find({ roomNumber: roomNumber })
         .skip(offsetVal)
+        .limit(limitVal)
         .exec();
 
-      if (!userEntities || userEntities.length === 0) {
+      if (!bookings || bookings.length === 0) {
         return ApiResponse(null, 'No bookings found!');
       }
 
-      const dateTodayUTC = new Date().toISOString();
+      let roomName = bookings[0].roomName || 'Unknown Room';
+      const allUserBookings = [];
 
-      const appliedCandidates = [];
-      let roomName: string | null = null;
-
-      await Promise.all(
-        userEntities.map(async (user) => {
-          // const totalBookings = await this.bookingModel
-          //   .countDocuments({
-          //     roomNumber: roomNumber,
-          //   })
-          //   .exec();
-
-          const bookings = await this.bookingModel
-            .find({
-              roomNumber: roomNumber,
-            })
-            // .limit(bookingLimitVal)
-            // .skip(bookingOffsetVal)
-            .exec();
-
-          if (bookings.length > 0) {
-            if (roomName === null) {
-              roomName = bookings[0].roomName;
-            }
-
-            // const bookingWithStatus = bookings.map((booking) => {
-            //   const bookingDateUTC = new Date(
-            //     booking.bookingDate,
-            //   ).toISOString();
-
-            //   const bookingDetails = {
-            //     bookingId: booking._id,
-            //   };
-
-            //   return {
-            //     ...bookingDetails,
-            //     bookingStatus:
-            //       bookingDateUTC < dateTodayUTC ? 'past' : 'upcoming',
-            //   };
-            // });
-
-            appliedCandidates.push({
-              username: user.username,
-              email: user.email,
-              // bookings: bookingWithStatus,
-              // totalBookings: totalBookings,
-              // bookingLimit: bookingLimitVal,
-              // bookingOffset: bookingOffsetVal,
-            });
-          }
-        }),
-      );
+      for (const booking of bookings) {
+        const user = await this.userModel.findById(booking.userId).exec();
+        if (user) {
+          allUserBookings.push({
+            username: user.username,
+            email: user.email,
+          });
+        }
+      }
 
       const response = {
-        roomName: roomName || 'Unknown Room',
+        roomName: roomName,
         roomNumber: roomNumber.toString(),
-        appliedCandidates,
-        totalUsers: totalCount,
+        allUserBookings,
+        totalBookings: bookings.length,
         limit: limitVal,
         offset: offsetVal,
       };
@@ -518,84 +726,36 @@ export class RoomBookingService {
       console.error('Error fetching booking details:', error);
       return ApiResponse(
         null,
-        'Something went wrong while fetching user booking details for a particular room.',
+        'Something went wrong while fetching user booking details for the particular room.',
       );
     }
   }
 
-  async getAllUserBookingDetails(
-    limitVal: number,
-    offsetVal: number,
-    // bookingLimitVal: number,
-    // bookingOffsetVal: number,
-  ) {
+  async getAllUserBookingDetails(limitVal: number, offsetVal: number) {
     try {
-      const totalCount = await this.userModel.countDocuments().exec();
+      const uniqueUserIds = await this.bookingModel.distinct('userId').exec();
 
-      const userEntities = await this.userModel
-        .find()
+      const totalUsers = uniqueUserIds.length;
+
+      const paginatedUserEntities = await this.userModel
+        .find({ _id: { $in: uniqueUserIds } })
         .limit(limitVal)
         .skip(offsetVal)
         .exec();
 
-      if (!userEntities || userEntities.length === 0) {
-        return ApiResponse(null, 'No bookings found!');
+      if (!paginatedUserEntities || paginatedUserEntities.length === 0) {
+        return ApiResponse(null, 'No users with bookings found!');
       }
 
-      // const dateTodayUTC = new Date().toISOString();
-
-      const allUserBookings = await Promise.all(
-        userEntities.map(async (user) => {
-          // const totalBookings = user.bookings.length;
-
-          // const paginatedBookings = user.bookings.slice(
-          //   bookingOffsetVal,
-          //   bookingOffsetVal + bookingLimitVal,
-          // );
-
-          // const bookingWithStatus = await Promise.all(
-          //   paginatedBookings.map(async (bookingId) => {
-          //     const booking = await this.bookingModel
-          //       .findById(bookingId)
-          //       .exec();
-
-          //     if (booking) {
-          //       const bookingDateUTC = new Date(
-          //         booking.bookingDate,
-          //       ).toISOString();
-
-          //       const bookingDetails = {
-          //         roomName: booking.roomName,
-          //         roomNumber: booking.roomNumber,
-          //         bookingDate: bookingDateUTC,
-          //         bookingId: booking._id,
-          //       };
-
-          //       return {
-          //         ...bookingDetails,
-          //         bookingStatus:
-          //           bookingDateUTC < dateTodayUTC ? 'past' : 'upcoming',
-          //       };
-          //     }
-          //     return null;
-          //   }),
-          // );
-
-          return {
-            username: user.username,
-            email: user.email,
-            // bookings: bookingWithStatus.filter(Boolean),
-            // totalBookings,
-            // bookingLimit: bookingLimitVal,
-            // bookingOffset: bookingOffsetVal,
-          };
-        }),
-      );
+      const allUserBookings = paginatedUserEntities.map((user) => ({
+        username: user.username,
+        email: user.email,
+      }));
 
       return ApiResponse(
         {
           allUserBookings,
-          totalUsers: totalCount,
+          totalUsers,
           limit: limitVal,
           offset: offsetVal,
         },
@@ -609,6 +769,92 @@ export class RoomBookingService {
       );
     }
   }
+
+  // async getAllUserBookingDetails(
+  //   limitVal: number,
+  //   offsetVal: number,
+  //   // bookingLimitVal: number,
+  //   // bookingOffsetVal: number,
+  // ) {
+  //   try {
+  //     const totalCount = await this.userModel.countDocuments().exec();
+
+  //     const userEntities = await this.userModel
+  //       .find()
+  //       .limit(limitVal)
+  //       .skip(offsetVal)
+  //       .exec();
+
+  //     if (!userEntities || userEntities.length === 0) {
+  //       return ApiResponse(null, 'No bookings found!');
+  //     }
+
+  //     const dateTodayUTC = new Date().toISOString();
+  //     let totalBookings = 0;
+
+  //     const allUserBookings = await Promise.all(
+  //       userEntities.map(async (user) => {
+  //         totalBookings += user.bookings.length;
+
+  //         const paginatedBookings = user.bookings.slice(
+  //           bookingOffsetVal,
+  //           bookingOffsetVal + bookingLimitVal,
+  //         );
+
+  //         const bookingWithStatus = await Promise.all(
+  //           paginatedBookings.map(async (bookingId) => {
+  //             const booking = await this.bookingModel.findById(bookingId).exec();
+
+  //             if (booking) {
+  //               const bookingDateUTC = new Date(
+  //                 booking.bookingDate,
+  //               ).toISOString();
+
+  //               const bookingDetails = {
+  //                 roomName: booking.roomName,
+  //                 roomNumber: booking.roomNumber,
+  //                 bookingDate: bookingDateUTC,
+  //                 bookingId: booking._id,
+  //               };
+
+  //               return {
+  //                 ...bookingDetails,
+  //                 bookingStatus:
+  //                   bookingDateUTC < dateTodayUTC ? 'past' : 'upcoming',
+  //               };
+  //             }
+  //             return null;
+  //           }),
+  //         );
+
+  //         return {
+  //           username: user.username,
+  //           email: user.email,
+  //           bookings: bookingWithStatus.filter(Boolean),
+  //           totalBookings: user.bookings.length,
+  //           bookingLimit: bookingLimitVal,
+  //           bookingOffset: bookingOffsetVal,
+  //         };
+  //       }),
+  //     );
+
+  //     return ApiResponse(
+  //       {
+  //         allUserBookings,
+  //         totalUsers: totalBookings,
+  //         limit: limitVal,
+  //         offset: offsetVal,
+  //       },
+  //       'User bookings retrieved successfully',
+  //     );
+  //   } catch (error) {
+  //     console.error('Error fetching booking details:', error);
+  //     return ApiResponse(
+  //       null,
+  //       'Something went wrong while fetching all users booking details',
+  //     );
+  //   }
+  // }
 
   async getAUserBookingDetailsForAParticularDateAndRoom(
     username: string,
