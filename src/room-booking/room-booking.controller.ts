@@ -30,7 +30,7 @@ export class RoomBookingController {
     @Body() createRoomDto: CreateRoomDto,
   ) {
     if (!request.user) {
-      return ApiResponse(null, 'Unauthorized: token may be expired!');
+      return ApiResponse(null, 'Unauthorized: token may be expired!', 401);
     }
 
     const response = await this.roomBookingService.createRoom(
@@ -38,7 +38,7 @@ export class RoomBookingController {
       createRoomDto,
     );
 
-    return response;
+    return ApiResponse(response, 'Room created successfully!', 200);
   }
 
   @Post('book-room')
@@ -47,7 +47,7 @@ export class RoomBookingController {
     @Body() roomBookingDto: RoomBookingDto,
   ) {
     if (!request.user) {
-      return ApiResponse(null, 'Unauthorized: token may be expired!');
+      return ApiResponse(null, 'Unauthorized: token may be expired!', 401);
     }
 
     const userId = request.user._id;
@@ -81,6 +81,7 @@ export class RoomBookingController {
         return ApiResponse(
           null,
           'User cannot book the same or different rooms more than once on the same date.',
+          409
         );
       }
 
@@ -93,7 +94,7 @@ export class RoomBookingController {
       return response;
     } catch (error) {
       console.log('Error: ', error);
-      throw new BadRequestException('There is no room for booking.');
+      return ApiResponse(null, 'There is no room for booking!', 404);
     }
   }
 
@@ -252,7 +253,7 @@ export class RoomBookingController {
       //   : 0;
 
       if (!request.user) {
-        return ApiResponse(null, 'Unauthorized');
+        return ApiResponse(null, 'Unauthorized', 401);
       }
 
       const userId = request.user._id;
@@ -263,7 +264,7 @@ export class RoomBookingController {
       if (date) {
         dateObj = parse(date, 'yyyy-MM-dd', new Date());
         if (!isValid(dateObj)) {
-          return ApiResponse(null, 'Invalid booking date format.');
+          return ApiResponse(null, 'Invalid booking date format.', 400);
         }
       }
 
@@ -353,9 +354,9 @@ export class RoomBookingController {
           );
     } catch (error) {
       console.log('Error: ', error);
-      throw new HttpException(
+      return ApiResponse(null,
         'Something went wrong while fetching user booking details',
-        HttpStatus.INTERNAL_SERVER_ERROR,
+        500,
       );
     }
   }
@@ -382,7 +383,7 @@ export class RoomBookingController {
         : 0;
 
       if (!request.user) {
-        return ApiResponse(null, 'Unauthorized: token may be expired!');
+        return ApiResponse(null, 'Unauthorized: token may be expired!', 401);
       }
 
       let dateObj: Date | null = null;
@@ -391,7 +392,7 @@ export class RoomBookingController {
         dateObj = parse(date, 'yyyy-MM-dd', new Date());
 
         if (!isValid(dateObj)) {
-          return ApiResponse(null, 'Invalid booking date format.');
+          return ApiResponse(null, 'Invalid booking date format.', 400);
         }
       }
 
@@ -424,9 +425,9 @@ export class RoomBookingController {
       }
     } catch (error) {
       console.error('Error:', error);
-      throw new HttpException(
+      return ApiResponse(null,
         'Something went wrong while fetching room details',
-        HttpStatus.INTERNAL_SERVER_ERROR,
+        500,
       );
     }
   }
@@ -438,18 +439,18 @@ export class RoomBookingController {
     @Req() request: ExpressRequest,
   ) {
     if (!request.user) {
-      return ApiResponse(null, 'Unauthorized: token may be expired!');
+      return ApiResponse(null, 'Unauthorized: token may be expired!', 401);
     }
 
     try {
       if (!date) {
-        return ApiResponse(null, 'Date is required.');
+        return ApiResponse(null, 'Date is required.', 400);
       }
 
       const dateObj = parse(date, 'yyyy-MM-dd', new Date());
 
       if (!isValid(dateObj)) {
-        return ApiResponse(null, 'Invalid booking date format.');
+        return ApiResponse(null, 'Invalid booking date format.', 400);
       }
 
       const response = await this.roomBookingService.findAvailableSeatsOfARoom(
@@ -457,11 +458,12 @@ export class RoomBookingController {
         dateObj,
       );
 
-      return response;
+      return ApiResponse(response, 'Bookings available for the room in the given date.', 200);
     } catch (error) {
       console.log('Error: ', error);
-      throw new BadRequestException(
+      return ApiResponse(null,
         'Something went wrong while fetching booking-availability of a room, Please check input parameters.',
+        500
       );
     }
   }
@@ -470,16 +472,16 @@ export class RoomBookingController {
   async checkExistingRooms(@Req() request: ExpressRequest) {
     try {
       if (!request.user) {
-        return ApiResponse(null, 'Unauthorized');
+        return ApiResponse(null, 'Unauthorized', 401);
       }
       const response = await this.roomBookingService.checkExistingRooms();
 
-      return response;
+      return ApiResponse(response, 'Room exist.', 200);
     } catch (error) {
       console.log('Error: ', error);
-      throw new HttpException(
+      return ApiResponse(null,
         'Something went wrong while checking existing rooms!',
-        HttpStatus.PROCESSING,
+        500,
       );
     }
   }

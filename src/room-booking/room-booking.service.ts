@@ -37,22 +37,25 @@ export class RoomBookingService {
         });
 
         if (existingRoom) {
-          return ApiResponse(null, 'Room is already created!');
+          return ApiResponse(null, 'Room is already created!', 200);
         } else {
           const createdRoom = new this.roomModel(createRoomDto);
           createdRoom.save();
-          return ApiResponse(createdRoom, 'Room is created successfully!');
+          return ApiResponse(createdRoom, 'Room is created successfully!', 200);
         }
       } else {
         return ApiResponse(
           null,
           'Creating room service is not available for you!',
+          503,
         );
       }
     } catch (error) {
       console.log('Error: ', error);
-      throw new UnprocessableEntityException(
+      return ApiResponse(
+        null,
         'Something went wrong while creating room!',
+        500,
       );
     }
   }
@@ -80,7 +83,7 @@ export class RoomBookingService {
         const room = await this.roomModel.findOne({ roomNumber }).exec();
 
         if (!room) {
-          throw new NotFoundException('Room is not found!');
+          return ApiResponse(null, 'Room is not found!', 404);
         }
 
         const booking = new this.bookingModel({
@@ -99,13 +102,15 @@ export class RoomBookingService {
         user.bookings.push(booking._id);
         await user.save();
 
-        return ApiResponse(booking, 'Room booked successfully!');
+        return ApiResponse(booking, 'Room booked successfully!', 200);
       } else {
-        return ApiResponse(null, 'Room is fully booked for the day!');
+        return ApiResponse(null, 'Room is fully booked for the day!', 409);
       }
     } catch (error) {
-      throw new UnprocessableEntityException(
+      return ApiResponse(
+        null,
         'Something went wrong while booking a room!',
+        500,
       );
     }
   }
@@ -113,7 +118,7 @@ export class RoomBookingService {
   async hasUserAlreadyAppliedForDate(
     userId: Types.ObjectId,
     bookingDate: Date,
-  ): Promise<boolean> {
+  ) {
     try {
       const booking = await this.bookingModel.findOne({
         $and: [
@@ -127,11 +132,14 @@ export class RoomBookingService {
       });
 
       if (booking) {
-        return true;
+        // return ApiResponse(true, 'You are already applied for the day!', 400);
+        return true
       }
     } catch (error) {
-      throw new UnprocessableEntityException(
+      return ApiResponse(
+        null,
         'Something went wrong while checking the user is already booked any room for the day!',
+        500,
       );
     }
   }
@@ -159,8 +167,10 @@ export class RoomBookingService {
         availableSeats: availableSeats,
       };
     } catch (error) {
-      throw new UnprocessableEntityException(
+      throw ApiResponse(
+        null,
         'Something went wrong while fetching booking-availability of a room!',
+        500,
       );
     }
   }
@@ -173,7 +183,7 @@ export class RoomBookingService {
     try {
       const user = await this.userModel.findById(userId).exec();
       if (!user) {
-        throw new NotFoundException('User not found!');
+        return ApiResponse(null, 'User not found!', 404);
       }
 
       const userBooking = await this.bookingModel
@@ -185,7 +195,7 @@ export class RoomBookingService {
         .exec();
 
       if (!userBooking) {
-        return ApiResponse(null, 'No bookings found for this user!');
+        return ApiResponse(null, 'No bookings found for this user!', 404);
       }
 
       const bookingDetails = {
@@ -201,9 +211,10 @@ export class RoomBookingService {
         'Error fetching booking details of the user for a particular room and a particular date:',
         error,
       );
-      throw new HttpException(
+      return ApiResponse(
+        null,
         'Something went wrong while fetching user booking details for a particular room and a particular date.',
-        HttpStatus.INTERNAL_SERVER_ERROR,
+        500,
       );
     }
   }
@@ -217,7 +228,7 @@ export class RoomBookingService {
     try {
       const user = await this.userModel.findById(userId).exec();
       if (!user) {
-        throw new NotFoundException('User not found!');
+        return ApiResponse(null, 'User not found!', 404);
       }
 
       const totalCount = await this.bookingModel
@@ -231,7 +242,7 @@ export class RoomBookingService {
         .exec();
 
       if (!bookingEntities || bookingEntities.length === 0) {
-        return ApiResponse(null, 'No bookings found for this user!');
+        return ApiResponse(null, 'No bookings found for this user!', 404);
       }
 
       const dateTodayUTC = new Date().toISOString();
@@ -260,12 +271,14 @@ export class RoomBookingService {
           offset: offsetVal,
         },
         'User bookings retrieved successfully',
+        200,
       );
     } catch (error) {
       console.error('Error fetching booking details:', error);
-      throw new HttpException(
+      return ApiResponse(
+        null,
         'Something went wrong while fetching user booking details',
-        HttpStatus.INTERNAL_SERVER_ERROR,
+        500,
       );
     }
   }
@@ -278,7 +291,7 @@ export class RoomBookingService {
     try {
       const user = await this.userModel.findById(userId).exec();
       if (!user) {
-        throw new NotFoundException('User not found!');
+        return ApiResponse(null, 'User not found!', 404);
       }
 
       const totalCount = await this.bookingModel
@@ -292,7 +305,7 @@ export class RoomBookingService {
         .exec();
 
       if (!bookingEntities || bookingEntities.length === 0) {
-        return ApiResponse(null, 'No bookings found for this user!');
+        return ApiResponse(null, 'No bookings found for this user!', 404);
       }
 
       const dateTodayUTC = new Date().toISOString();
@@ -321,12 +334,14 @@ export class RoomBookingService {
           offset: offsetVal,
         },
         'User bookings retrieved successfully',
+        200,
       );
     } catch (error) {
       console.error('Error fetching booking details:', error);
-      throw new HttpException(
+      return ApiResponse(
+        null,
         'Something went wrong while fetching user booking details',
-        HttpStatus.INTERNAL_SERVER_ERROR,
+        500,
       );
     }
   }
@@ -529,7 +544,7 @@ export class RoomBookingService {
         .exec();
 
       if (!userEntities || userEntities.length === 0) {
-        return ApiResponse(null, 'No bookings found!');
+        return ApiResponse(null, 'No bookings found!', 404);
       }
 
       const allUserBookings = [];
@@ -538,7 +553,6 @@ export class RoomBookingService {
 
       await Promise.all(
         userEntities.map(async (user) => {
-          // Find bookings for the specific room, date, and user
           const bookings = await this.bookingModel
             .find({
               roomNumber: roomNumber,
@@ -548,10 +562,8 @@ export class RoomBookingService {
             .exec();
 
           if (bookings.length > 0) {
-            // Increment the count of users with bookings
             totalUsersWithBookings += 1;
 
-            // Set the room name if it hasn't been set already
             if (roomName === null) {
               roomName = bookings[0].roomName;
             }
@@ -559,7 +571,6 @@ export class RoomBookingService {
             allUserBookings.push({
               username: user.username,
               email: user.email,
-              // Optional: You can add more details here if needed
             });
           }
         }),
@@ -575,12 +586,13 @@ export class RoomBookingService {
         offset: offsetVal,
       };
 
-      return ApiResponse(response, 'User bookings retrieved successfully');
+      return ApiResponse(response, 'User bookings retrieved successfully', 200);
     } catch (error) {
       console.error('Error fetching booking details:', error);
       return ApiResponse(
         null,
         'Something went wrong while fetching user booking details for a particular room and date.',
+        500,
       );
     }
   }
@@ -696,7 +708,7 @@ export class RoomBookingService {
         .exec();
 
       if (!bookings || bookings.length === 0) {
-        return ApiResponse(null, 'No bookings found!');
+        return ApiResponse(null, 'No bookings found!', 404);
       }
 
       let roomName = bookings[0].roomName || 'Unknown Room';
@@ -721,12 +733,13 @@ export class RoomBookingService {
         offset: offsetVal,
       };
 
-      return ApiResponse(response, 'User bookings retrieved successfully');
+      return ApiResponse(response, 'User bookings retrieved successfully', 200);
     } catch (error) {
       console.error('Error fetching booking details:', error);
       return ApiResponse(
         null,
         'Something went wrong while fetching user booking details for the particular room.',
+        500,
       );
     }
   }
@@ -744,7 +757,7 @@ export class RoomBookingService {
         .exec();
 
       if (!paginatedUserEntities || paginatedUserEntities.length === 0) {
-        return ApiResponse(null, 'No users with bookings found!');
+        return ApiResponse(null, 'No users with bookings found!', 404);
       }
 
       const allUserBookings = paginatedUserEntities.map((user) => ({
@@ -760,12 +773,14 @@ export class RoomBookingService {
           offset: offsetVal,
         },
         'User bookings retrieved successfully',
+        200,
       );
     } catch (error) {
       console.error('Error fetching booking details:', error);
       return ApiResponse(
         null,
         'Something went wrong while fetching all users booking details',
+        500,
       );
     }
   }
@@ -864,7 +879,7 @@ export class RoomBookingService {
     try {
       const user = await this.userModel.findOne({ username }).exec();
       if (!user) {
-        throw new NotFoundException('User not found!');
+        return ApiResponse(null, 'User not found!', 404);
       }
 
       const userBooking = await this.bookingModel
@@ -876,7 +891,7 @@ export class RoomBookingService {
         .exec();
 
       if (!userBooking) {
-        return ApiResponse(null, 'No bookings found for this user!');
+        return ApiResponse(null, 'No bookings found for this user!', 404);
       }
 
       const dateTodayUTC = new Date().toISOString();
@@ -896,15 +911,17 @@ export class RoomBookingService {
           bookingStatus: bookingDateUTC < dateTodayUTC ? 'past' : 'upcoming',
         },
         'User booking retrieved successfully',
+        200,
       );
     } catch (error) {
       console.error(
         'Error fetching booking details of the user for a particular room and a particular date:',
         error,
       );
-      throw new HttpException(
+      return ApiResponse(
+        null,
         'Something went wrong while fetching user booking details for a particular room and a particular date.',
-        HttpStatus.INTERNAL_SERVER_ERROR,
+        500,
       );
     }
   }
@@ -918,7 +935,7 @@ export class RoomBookingService {
     try {
       const user = await this.userModel.findOne({ username }).exec();
       if (!user) {
-        throw new NotFoundException('User not found!');
+        return ApiResponse(null, 'User not found!', 404);
       }
 
       const totalCount = await this.bookingModel
@@ -932,7 +949,7 @@ export class RoomBookingService {
         .exec();
 
       if (!bookingEntities || bookingEntities.length === 0) {
-        return ApiResponse(null, 'No bookings found for this user!');
+        return ApiResponse(null, 'No bookings found for this user!', 404);
       }
 
       const dateTodayUTC = new Date().toISOString();
@@ -961,12 +978,14 @@ export class RoomBookingService {
           offset: offsetVal,
         },
         'User bookings retrieved successfully',
+        200,
       );
     } catch (error) {
       console.error('Error fetching booking details:', error);
-      throw new HttpException(
+      return ApiResponse(
+        null,
         'Something went wrong while fetching user booking details',
-        HttpStatus.INTERNAL_SERVER_ERROR,
+        500,
       );
     }
   }
@@ -979,7 +998,7 @@ export class RoomBookingService {
     try {
       const user = await this.userModel.findOne({ username }).exec();
       if (!user) {
-        throw new NotFoundException('User not found!');
+        return ApiResponse(null, 'User not found!', 404);
       }
 
       const totalCount = await this.bookingModel
@@ -993,7 +1012,7 @@ export class RoomBookingService {
         .exec();
 
       if (!bookingEntities || bookingEntities.length === 0) {
-        return ApiResponse(null, 'No bookings found for this user!');
+        return ApiResponse(null, 'No bookings found for this user!', 404);
       }
 
       const dateTodayUTC = new Date().toISOString();
@@ -1022,12 +1041,14 @@ export class RoomBookingService {
           offset: offsetVal,
         },
         'User bookings retrieved successfully',
+        200,
       );
     } catch (error) {
       console.error('Error fetching booking details:', error);
-      throw new HttpException(
+      return ApiResponse(
+        null,
         'Something went wrong while fetching user booking details',
-        HttpStatus.INTERNAL_SERVER_ERROR,
+        500,
       );
     }
   }
@@ -1044,12 +1065,13 @@ export class RoomBookingService {
         return ApiResponse(
           null,
           'Fetching room details service is not available for you!',
+          503,
         );
       }
 
       const room = await this.roomModel.findOne({ roomNumber }).exec();
       if (!room) {
-        return ApiResponse(null, 'Room not found');
+        return ApiResponse(null, 'Room not found!', 404);
       }
 
       const totalCount = await this.bookingModel
@@ -1069,6 +1091,7 @@ export class RoomBookingService {
         return ApiResponse(
           null,
           'No existing bookings for the room on the specified date.',
+          404,
         );
       }
 
@@ -1125,12 +1148,14 @@ export class RoomBookingService {
           offset: offsetVal,
         },
         'Room details retrieved successfully',
+        200,
       );
     } catch (error) {
       console.error('Error: ', error);
       return ApiResponse(
         null,
         'Something went wrong while fetching room details for the specified date!',
+        500,
       );
     }
   }
@@ -1146,13 +1171,14 @@ export class RoomBookingService {
         return ApiResponse(
           null,
           'Fetching room details service is not available for you!',
+          503,
         );
       }
 
       const room = await this.roomModel.findOne({ roomNumber }).exec();
 
       if (!room) {
-        return ApiResponse(null, 'Room not found');
+        return ApiResponse(null, 'Room not found!', 404);
       }
 
       const totalCount = await this.bookingModel
@@ -1166,7 +1192,7 @@ export class RoomBookingService {
         .exec();
 
       if (!bookings || bookings.length === 0) {
-        return ApiResponse(null, 'Bookings are not found!');
+        return ApiResponse(null, 'Bookings are not found!', 404);
       }
 
       const dateTodayUTC = new Date().toISOString();
@@ -1216,12 +1242,14 @@ export class RoomBookingService {
           offset: offsetVal,
         },
         'Room details retrieved successfully',
+        200,
       );
     } catch (error) {
       console.error('Error fetching room details:', error);
       return ApiResponse(
         null,
         'Something went wrong while fetching room details',
+        500,
       );
     }
   }
@@ -1238,6 +1266,7 @@ export class RoomBookingService {
         return ApiResponse(
           null,
           'Fetching room details service is not available for you!',
+          503,
         );
       }
 
@@ -1250,7 +1279,7 @@ export class RoomBookingService {
         .exec();
 
       if (!roomEntity || roomEntity.length === 0) {
-        return ApiResponse(null, 'No room exists.');
+        return ApiResponse(null, 'No room exists!', 404);
       }
 
       const dateTodayUTC = new Date().toISOString();
@@ -1320,12 +1349,14 @@ export class RoomBookingService {
           offset: offsetVal,
         },
         'Room details retrieved successfully',
+        200,
       );
     } catch (error) {
       console.error('Error fetching room details:', error);
       return ApiResponse(
         null,
         'Something went wrong while fetching room details',
+        500,
       );
     }
   }
@@ -1335,7 +1366,7 @@ export class RoomBookingService {
       const roomEntity = await this.roomModel.find().exec();
 
       if (!roomEntity || roomEntity.length === 0) {
-        return ApiResponse(null, 'No room exists.');
+        return ApiResponse(null, 'No room exists!', 404);
       }
 
       const existingRooms = roomEntity.map((room) => {
@@ -1351,6 +1382,7 @@ export class RoomBookingService {
       return ApiResponse(
         null,
         'Something went wrong while checking existing rooms!',
+        500,
       );
     }
   }

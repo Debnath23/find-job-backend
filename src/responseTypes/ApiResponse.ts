@@ -1,6 +1,8 @@
-export const ApiResponse = (data: object, message: string) => {
+
+export const ApiResponse = (data: object, message: string, status: number) => {
   return {
-    data: data,
-    message: message,
+    data: data || null,   
+    message: message || '',
+    status: status || 200,
   };
 };
