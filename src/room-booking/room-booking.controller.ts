@@ -3,9 +3,6 @@ import {
   Body,
   Controller,
   Get,
-  HttpException,
-  HttpStatus,
-  Param,
   Post,
   Query,
   Req,
@@ -81,7 +78,7 @@ export class RoomBookingController {
         return ApiResponse(
           null,
           'User cannot book the same or different rooms more than once on the same date.',
-          409
+          409,
         );
       }
 
@@ -354,7 +351,8 @@ export class RoomBookingController {
           );
     } catch (error) {
       console.log('Error: ', error);
-      return ApiResponse(null,
+      return ApiResponse(
+        null,
         'Something went wrong while fetching user booking details',
         500,
       );
@@ -425,7 +423,8 @@ export class RoomBookingController {
       }
     } catch (error) {
       console.error('Error:', error);
-      return ApiResponse(null,
+      return ApiResponse(
+        null,
         'Something went wrong while fetching room details',
         500,
       );
@@ -458,12 +457,17 @@ export class RoomBookingController {
         dateObj,
       );
 
-      return ApiResponse(response, 'Bookings available for the room in the given date.', 200);
+      return ApiResponse(
+        response,
+        'Bookings available for the room in the given date.',
+        200,
+      );
     } catch (error) {
       console.log('Error: ', error);
-      return ApiResponse(null,
+      return ApiResponse(
+        null,
         'Something went wrong while fetching booking-availability of a room, Please check input parameters.',
-        500
+        500,
       );
     }
   }
@@ -479,7 +483,8 @@ export class RoomBookingController {
       return ApiResponse(response, 'Room exist.', 200);
     } catch (error) {
       console.log('Error: ', error);
-      return ApiResponse(null,
+      return ApiResponse(
+        null,
         'Something went wrong while checking existing rooms!',
         500,
       );

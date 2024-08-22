@@ -1,9 +1,5 @@
 import {
   Injectable,
-  NotFoundException,
-  UnprocessableEntityException,
-  HttpException,
-  HttpStatus,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
@@ -175,6 +171,50 @@ export class RoomBookingService {
     }
   }
 
+  // async getUserBookingDetailsForAParticularDateAndRoom(
+  //   userId: Types.ObjectId,
+  //   roomNumber: number,
+  //   dateObj: Date,
+  // ) {
+  //   try {
+  //     const user = await this.userModel.findById(userId).exec();
+  //     if (!user) {
+  //       return ApiResponse(null, 'User not found!', 404);
+  //     }
+
+  //     const userBooking = await this.bookingModel
+  //       .findOne({
+  //         userId: userId,
+  //         roomNumber: roomNumber,
+  //         bookingDate: dateObj,
+  //       })
+  //       .exec();
+
+  //     if (!userBooking) {
+  //       return ApiResponse(null, 'No bookings found for this user!', 404);
+  //     }
+
+  //     const bookingDetails = {
+  //       roomName: userBooking.roomName,
+  //       roomNumber: userBooking.roomNumber,
+  //       bookingDate: userBooking.bookingDate,
+  //       bookingId: userBooking._id,
+  //     };
+
+  //     return bookingDetails;
+  //   } catch (error) {
+  //     console.error(
+  //       'Error fetching booking details of the user for a particular room and a particular date:',
+  //       error,
+  //     );
+  //     return ApiResponse(
+  //       null,
+  //       'Something went wrong while fetching user booking details for a particular room and a particular date.',
+  //       500,
+  //     );
+  //   }
+  // }
+
   async getUserBookingDetailsForAParticularDateAndRoom(
     userId: Types.ObjectId,
     roomNumber: number,
@@ -185,26 +225,29 @@ export class RoomBookingService {
       if (!user) {
         return ApiResponse(null, 'User not found!', 404);
       }
-
+  
+      const startOfDay = new Date(dateObj.setHours(0, 0, 0, 0));
+      const endOfDay = new Date(dateObj.setHours(23, 59, 59, 999));
+  
       const userBooking = await this.bookingModel
         .findOne({
           userId: userId,
           roomNumber: roomNumber,
-          bookingDate: dateObj,
+          bookingDate: { $gte: startOfDay, $lt: endOfDay },
         })
         .exec();
-
+  
       if (!userBooking) {
         return ApiResponse(null, 'No bookings found for this user!', 404);
       }
-
+  
       const bookingDetails = {
         roomName: userBooking.roomName,
         roomNumber: userBooking.roomNumber,
         bookingDate: userBooking.bookingDate,
         bookingId: userBooking._id,
       };
-
+  
       return bookingDetails;
     } catch (error) {
       console.error(
@@ -217,7 +260,7 @@ export class RoomBookingService {
         500,
       );
     }
-  }
+  }  
 
   async getUserBookingDetailsForAParticularRoom(
     userId: Types.ObjectId,
