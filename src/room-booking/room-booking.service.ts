@@ -228,6 +228,9 @@ export class RoomBookingService {
   
       const startOfDay = new Date(dateObj.setHours(0, 0, 0, 0));
       const endOfDay = new Date(dateObj.setHours(23, 59, 59, 999));
+      
+      const dateTodayUTC = new Date().toISOString();
+      const bookingDateUTC = new Date(dateObj).toISOString();
   
       const userBooking = await this.bookingModel
         .findOne({
@@ -247,8 +250,15 @@ export class RoomBookingService {
         bookingDate: userBooking.bookingDate,
         bookingId: userBooking._id,
       };
-  
-      return bookingDetails;
+
+      return ApiResponse(
+        {
+          ...bookingDetails,
+          bookingStatus: bookingDateUTC < dateTodayUTC ? 'past' : 'upcoming',
+        },
+        'User booking retrieved successfully',
+        200,
+      );
     } catch (error) {
       console.error(
         'Error fetching booking details of the user for a particular room and a particular date:',
