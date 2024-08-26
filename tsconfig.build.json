@@ -1,4 +1,25 @@
+// {
+//   "extends": "./tsconfig.json",
+//   "exclude": ["node_modules", "test", "dist", "**/*spec.ts"]
+// }
+
+
 {
-  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./public",
+    "rootDir": "./src",
+    "baseUrl": ".",
+    "sourceMap": true,
+    "declaration": true,
+    "declarationMap": true,
+    "removeComments": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "moduleResolution": "node",
+    "target": "es2017",
+    "module": "commonjs",
+    "lib": ["es2017", "dom"]
+  },
+  "include": ["src/**/*.ts"],
   "exclude": ["node_modules", "test", "dist", "**/*spec.ts"]
 }
