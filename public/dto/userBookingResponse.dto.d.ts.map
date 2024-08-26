@@ -1,0 +1,1 @@
+{"version":3,"file":"userBookingResponse.dto.d.ts","sourceRoot":"","sources":["../../src/dto/userBookingResponse.dto.ts"],"names":[],"mappings":"AAAA,qBAAa,sBAAsB;IAC/B,QAAQ,EAAE,MAAM,CAAC;IACjB,UAAU,EAAE,MAAM,CAAC;IACnB,WAAW,EAAE,IAAI,CAAC;IAClB,SAAS,EAAE,GAAG,CAAC;CAClB"}
