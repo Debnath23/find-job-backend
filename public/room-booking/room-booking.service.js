@@ -249,7 +249,7 @@ let RoomBookingService = class RoomBookingService {
         try {
             const room = await this.roomModel.findOne({ roomNumber }).exec();
             if (!room) {
-                return (0, ApiResponse_1.ApiResponse)(null, "No room exists!", 400);
+                return (0, ApiResponse_1.ApiResponse)(null, 'No room exists!', 400);
             }
             const startOfDay = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
             const endOfDay = new Date(startOfDay);
@@ -272,7 +272,7 @@ let RoomBookingService = class RoomBookingService {
             if (!users || users.length === 0) {
                 return (0, ApiResponse_1.ApiResponse)(null, 'No users found!', 404);
             }
-            const allUserBookings = users.map(user => ({
+            const allUserBookings = users.map((user) => ({
                 username: user.username,
                 email: user.email,
             }));
@@ -296,7 +296,7 @@ let RoomBookingService = class RoomBookingService {
         try {
             const room = await this.roomModel.findOne({ roomNumber }).exec();
             if (!room) {
-                return (0, ApiResponse_1.ApiResponse)(null, "No room exist!", 400);
+                return (0, ApiResponse_1.ApiResponse)(null, 'No room exist!', 400);
             }
             const uniqueUserIds = await this.bookingModel
                 .distinct('userId', { roomNumber: roomNumber })
@@ -310,7 +310,7 @@ let RoomBookingService = class RoomBookingService {
             if (!users || users.length === 0) {
                 return (0, ApiResponse_1.ApiResponse)(null, 'No users found!', 404);
             }
-            const allUserBookings = users.map(user => ({
+            const allUserBookings = users.map((user) => ({
                 username: user.username,
                 email: user.email,
             }));
@@ -445,6 +445,8 @@ let RoomBookingService = class RoomBookingService {
             const bookingsWithStatus = bookingEntities.map((booking) => {
                 const bookingDateUTC = new Date(booking.bookingDate).toISOString();
                 const bookingDetails = {
+                    roomName: booking.roomName,
+                    roomNumber: booking.roomNumber,
                     bookingDate: bookingDateUTC,
                     bookingId: booking._id,
                 };
